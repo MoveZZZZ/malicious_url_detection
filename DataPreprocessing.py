@@ -1,34 +1,31 @@
-import pandas as pd
-import numpy as np
-import time, warnings
-from sklearn.model_selection import StratifiedShuffleSplit
+import time
+import xxhash
+from sympy import nextprime
 from LogSystem import LogFileCreator
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split, RepeatedStratifiedKFold
-from imblearn.under_sampling import TomekLinks, ClusterCentroids, NearMiss
-from sklearn.cluster import KMeans
-from imblearn.over_sampling import SMOTE, ADASYN, RandomOverSampler
-from imblearn.combine import SMOTETomek
-
 import pandas as pd
 import re
 import math
 import whois
 import tldextract
 from urllib.parse import urlparse
+from sklearn.model_selection import StratifiedShuffleSplit
+
 class DataPreprocessing:
     def __init__(self, log_filename):
-        self.base_dataset_path = "D:/PWR/Praca magisterska/Dataset/dataset_mall.csv"
+        self.base_dataset_path = "D:/PWR/Praca magisterska/Dataset/dataset_mal.csv"
         self.features_selected_dataset_path = "D:/PWR/Praca magisterska/Dataset/data_with_features.csv"
+        self.cleared_and_vectorized_dataset_path = "D:/PWR/Praca magisterska/Dataset/cleared_dataset_mal_url.csv"
 
-        self.cleared_and_vectorized_dataset_path = "D:/PWR/Praca magisterska/Dataset/dataset_mall.csv"
-        #self.data_for_train_model = "C:/Users/maksf/Desktop/MachineLearningCSV_F/MachineLearningCVE/for_train_90_perc.csv"
-        #self.data_for_test_model = "C:/Users/maksf/Desktop/MachineLearningCSV_F/MachineLearningCVE/for_full_test_10_perc.csv"
-        self.data_full = None
-        self.data_features_selected = None
-        self.cleared_and_vectorized_data = None
-        #self.data_train = self.read_data(self.data_for_train_model)
-        #self.data_test = self.read_data(self.data_for_test_model)
+        self.data_for_train_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
+        self.data_for_test_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
+
+        self.data_full = self.read_data(self.base_dataset_path)
+        self.data_features_selected = self.read_data(self.features_selected_dataset_path)
+        self.cleared_and_vectorized_data = self.read_data(self.cleared_and_vectorized_dataset_path)
+
+        self.full_train = self.read_data(self.data_for_train_model)
+        self.full_test = self.read_data(self.data_for_test_model)
+
         self.LogCreator = LogFileCreator(log_filename)
         self.SUSPICIOUS_WORDS = {"login", "secure", "verify", "update", "password", "PayPal", "signin", "bank", "account", "update",
                                  "free", "lucky", "service", "bonus", "ebayissapi", "webscr"}
@@ -452,6 +449,7 @@ class DataPreprocessing:
             'phishing': 2,
             'malware': 3
         }
+        self.N = nextprime(10**7)
     def read_data(self, file_path):
         try:
             data = pd.read_csv(file_path)
@@ -462,13 +460,17 @@ class DataPreprocessing:
 
     def print_dataset_info (self, data):
         print(data['type'].value_counts())
-
     def print_class_count(self, data):
         print(f"BENIGN: {(data['type'] == 'benign').sum()}")
         print(f"DEFACEMENT: {(data['type'] != 'defacement').sum()}")
         print(f"PHISHING: {(data['type'] != 'phishing').sum()}")
         print(f"MALWARE: {(data['type'] != 'malware').sum()}")
-
+    def print_first_20_row(self,data):
+        print(data.head(20))
+    def fast_hash_encode(self, category, salt="my_salt"):
+        category = str(category)
+        hashed_value = xxhash.xxh64(salt + category).intdigest()
+        return hashed_value % self.N
     def change_data_labels(self, _data):
         self.print_dataset_info(_data)
         self.LogCreator.print_and_write_log("Start change data labels")
@@ -482,13 +484,45 @@ class DataPreprocessing:
         self.print_dataset_info(data)
         return data
 
+    def clear_and_vectorize_finally_dataset(self, data):
+        dataset_form_file = self.data_features_selected.copy()
+        self.LogCreator.print_and_write_log("Start of full data cleansing")
+        full_cleansing_data_time_start  = time.time()
+        df = self.change_data_labels(dataset_form_file)
+        binary_features = [
+            "contains_ip", "abnormal_url", "shortening_service", "c2_tld", "suspicious_tld",
+            "malware_tld", "c2_malicious_tld", "phishing_tld", "sensitive_tld", "contains_suspicious_words"
+        ]
+        for feature in binary_features:
+            df = df[df[feature].isin([0, 1])]
 
+        valid_types = {0, 1, 2, 3}
+        df = df[df['type'].isin(valid_types)]
+        df = df[df['region'].str.match(r'^[A-Za-z]+$', na=False)]
+        df_vectorized = df.copy()
+        df_vectorized['extract_root_domain_vector'] = df['root_domain'].apply(self.fast_hash_encode)
+        df_vectorized['get_url_region_vector'] = df['region'].apply(self.fast_hash_encode)
+
+        df_vectorized.drop(columns=['root_domain', 'region', 'url'], inplace=True, axis=1)
+        full_cleansing_data_time_end = time.time()
+        self.LogCreator.print_and_write_log(
+            f"End of full data cleansing. Time to change: {self.LogCreator.count_time(full_cleansing_data_time_start, full_cleansing_data_time_end):.2f} s.\n"
+            f"{self.LogCreator.string_spit_stars}")
+        df_vectorized.to_csv(self.cleared_and_vectorized_dataset_path, index=False)
+        self.LogCreator.print_and_write_log(f"File successfully saved to: {self.cleared_and_vectorized_dataset_path}")
 
     def refractoring_and_save_features_dataset(self):
+        self.LogCreator.print_and_write_log("Start get data features")
+        start_time_to_get_features = time.time()
         data = self.data_full.copy()
         features_df = data["url"].apply(self.extract_features).apply(pd.Series)
         _data = pd.concat([data, features_df], axis=1)
+        end_time_to_get_features = time.time()
+        self.LogCreator.print_and_write_log(
+            f"End get data features. Time to change: {self.LogCreator.count_time(start_time_to_get_features, end_time_to_get_features):.2f} s.\n"
+            f"{self.LogCreator.string_spit_stars}")
         _data.to_csv(self.features_selected_dataset_path, index=False)
+        self.LogCreator.print_and_write_log(f"File successfully saved to: {self.features_selected_dataset_path}")
 
     def extract_features(self, url):
         features = {}
@@ -529,9 +563,6 @@ class DataPreprocessing:
         features["url_entropy"] = self.calculate_entropy(url)
         features["region"] = self.get_url_region(url)
         return features
-
-
-
     def calculate_url_length(self, url):
         return len(url)
     def special_char_count (self, url):
@@ -650,3 +681,17 @@ class DataPreprocessing:
             if primary_domain.endswith(ccTLD):
                 return self.ccTLD_to_region[ccTLD]
         return "Global"
+    def split_dataset_into_train_and_test_files (self, full_data):
+        label_column = 'type'
+        test_size = 0.1
+        X = full_data.drop(columns=[label_column])
+        y = full_data[label_column]
+        strat_split = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=42)
+
+        for train_idx, test_idx in strat_split.split(X, y):
+            train_data = full_data.iloc[train_idx]
+            test_data = full_data.iloc[test_idx]
+
+        train_data.to_csv(self.data_for_train_model, index=False)
+        test_data.to_csv(self.data_for_test_model, index=False)
+        print("Completed split datasets!")
