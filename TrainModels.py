@@ -1,9 +1,10 @@
 from LogSystem import LogFileCreator
 from DataPreprocessing import DataPreprocessing
-from TrainTestDataPreprocessig import TrainTestDataPreprocessing
+from TrainTestDataPreprocessing import TrainTestDataPreprocessing
 from ModelNameAndPathesCreator import ModelNameAndPathesCreator
 from ConfusionMatrixAndRocCreator import CM_and_ROC_creator
 import time
+
 class TrainModels:
     def __init__(self, log_filename):
         self.LogCreator = LogFileCreator(log_filename)
