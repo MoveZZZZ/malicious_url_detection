@@ -29,7 +29,7 @@ class ModelNameAndPathesCreator:
             model = MLPClassifier(
                 solver="adam",
                 alpha=1e-4,
-                hidden_layer_sizes=(100, 50),
+                hidden_layer_sizes=(128, 64, 32),
                 random_state=42,
                 max_iter=200,
             )
