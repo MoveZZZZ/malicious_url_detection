@@ -1,6 +1,6 @@
 class LogFileCreator:
     def __init__(self, file_name):
-        self.output_path = f"D:/PWR/Praca magisterska/Log{file_name}.txt"
+        self.output_path = f"D:/PWR/Praca magisterska/Log/{file_name}.txt"
         self.string_spit_stars = 60 * "x"
         self.string_spit_tilds = 60*"~"
         self.string_spit_eq = 60*"="
