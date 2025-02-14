@@ -26,7 +26,7 @@ class TrainTestDataPreprocessing:
     def create_scaler(self, X):
         self.LogCreator.print_and_write_log("Start creating scaler")
         time_to_create_scaler_start = time.time()
-        scaler = MinMaxScaler()
+        scaler = MinMaxScaler(feature_range=(0, 1))
         scaler.fit(X)
 
         time_to_create_scaler_end = time.time()
@@ -36,7 +36,7 @@ class TrainTestDataPreprocessing:
             f"{self.LogCreator.string_spit_stars}"
         )
         return scaler
-    def scale_data(self, scaler,X_train, X_test):
+    def scale_data(self, scaler,X_train, X_test=None):
         self.LogCreator.print_and_write_log("Start scaling data")
         time_to_scale_start = time.time()
 
