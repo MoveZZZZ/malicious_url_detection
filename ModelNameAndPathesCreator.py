@@ -1,12 +1,12 @@
 from LogSystem import LogFileCreator
 import torch
-from CustomModels import DeepMLP, GNN
+from CustomModels import DeepMLP, GNN, BERTClassifier
 from sklearn.ensemble import RandomForestClassifier
 from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
 from sklearn.neural_network import MLPClassifier
 from pytorch_tabnet.tab_model import TabNetClassifier
-
+from transformers import TFBertForSequenceClassification
 class ModelNameAndPathesCreator:
     def __init__(self, log_filename):
         self.LogCreator = LogFileCreator(log_filename)
@@ -59,6 +59,9 @@ class ModelNameAndPathesCreator:
             model = GNN(input_size, 128, num_classes)
             model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
             save_file_name = f"GNN_{end_file_name}"
+        elif model_name == "bert":
+            model = TFBertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_classes)
+            save_file_name = f"BERT_{end_file_name}"
         else:
             print("Model is not defined!")
             return None, None

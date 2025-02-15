@@ -1,4 +1,5 @@
 from LogSystem import LogFileCreator
+import numpy as np
 import pandas as pd
 import time
 from sklearn.model_selection import train_test_split
@@ -12,6 +13,30 @@ class TrainTestDataPreprocessing:
         X = data.drop(['type'], axis = 1)
         y = data['type']
         return X,y
+
+
+
+    def split_data_for_train_and_validation_bert(self,  X_input_ids, X_attention_mask, y, _test_size, _random_state):
+        self.LogCreator.print_and_write_log("Start split data on train and test bert")
+        spit_time_start = time.time()
+        X_input_ids_np = np.array(X_input_ids)
+        X_attention_mask_np = np.array(X_attention_mask)
+        X_train_ids, X_test_ids, X_train_mask, X_test_mask, y_train, y_test = train_test_split(
+            X_input_ids_np, X_attention_mask_np, y, test_size=_test_size, random_state=_random_state
+        )
+        X_train = {
+            "input_ids": X_train_ids,
+            "attention_mask": X_train_mask
+        }
+        X_test = {
+            "input_ids": X_test_ids,
+            "attention_mask": X_test_mask
+        }
+        spit_time_end = time.time()
+        self.LogCreator.print_and_write_log(f"End split data on train and test bert. "
+                                            f"Time to split: {self.LogCreator.count_time(spit_time_start, spit_time_end):.2f} s.\n"
+                                            f"{self.LogCreator.string_spit_stars}")
+        return X_train, X_test, y_train, y_test
 
     def split_data_for_train_and_validation(self, X, y, _test_size, _random_state):
         self.LogCreator.print_and_write_log("Start split data on train and test")

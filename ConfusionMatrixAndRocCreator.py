@@ -10,6 +10,11 @@ class CM_and_ROC_creator:
         self.matrix_path = f"D:/PWR/Praca magisterska/Images/CM"
         self.ROC_path = f"D:/PWR/Praca magisterska/Images/ROC"
         self.train_history_path = f"D:/PWR/Praca magisterska/Images/TH"
+
+        # self.train_history_path = f"/mnt/d/PWR/Praca magisterska/Images/TH"
+        # self.matrix_path = f"/mnt/d/PWR/Praca magisterska/Images/CM"
+        # self.ROC_path = f"/mnt/d/PWR/Praca magisterska/Images/ROC"
+
         self.LogCreator = LogFileCreator(log_filename)
         self.label_mapping_url = {
             'benign': 0,
@@ -158,7 +163,6 @@ class CM_and_ROC_creator:
             fpr[i], tpr[i], _ = roc_curve(y_test_binarized[:, i], y_prob[:, i])
             roc_auc[i] = auc(fpr[i], tpr[i])
 
-        # Compute macro-average ROC
         all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
         mean_tpr = np.zeros_like(all_fpr)
 
@@ -168,7 +172,6 @@ class CM_and_ROC_creator:
 
         macro_roc_auc = auc(all_fpr, mean_tpr)
 
-        # Plot all ROC curves
         plt.figure(figsize=(10, 8))
         for i in range(n_classes):
             plt.plot(fpr[i], tpr[i], lw=2, label=f"Class {model.classes_[i]} (AUC = {roc_auc[i]:.2f})")
@@ -188,8 +191,6 @@ class CM_and_ROC_creator:
     def create_ROC_custom (self, model, X_test, y_test, save_file_name):
 
         y_prob = model.predict(X_test)
-
-        # Если y_test в one-hot, преобразуем обратно
         if len(y_test.shape) > 1 and y_test.shape[1] > 1:
             y_test_binarized = y_test  # Уже в one-hot
             classes = np.arange(y_test.shape[1])
@@ -207,7 +208,6 @@ class CM_and_ROC_creator:
             fpr[i], tpr[i], _ = roc_curve(y_test_binarized[:, i], y_prob[:, i])
             roc_auc[i] = auc(fpr[i], tpr[i])
 
-        # Вычисляем macro-average ROC
         all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
         mean_tpr = np.zeros_like(all_fpr)
 
@@ -217,7 +217,6 @@ class CM_and_ROC_creator:
 
         macro_roc_auc = auc(all_fpr, mean_tpr)
 
-        # Визуализация ROC-кривых
         plt.figure(figsize=(10, 8))
         for i in range(n_classes):
             plt.plot(fpr[i], tpr[i], lw=2, label=f"Class {classes[i]} (AUC = {roc_auc[i]:.2f})")

@@ -1,7 +1,5 @@
-import tensorflow as tf
 from tensorflow.keras import layers, models
-import tensorflow_hub as hu
-import tensorflow_text as text
+import tensorflow_hub as hub
 
 class DeepMLP(models.Model):
     def __init__(self, input_size, num_classes):

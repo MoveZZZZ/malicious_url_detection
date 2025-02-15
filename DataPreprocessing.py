@@ -16,15 +16,36 @@ class DataPreprocessing:
         self.features_selected_dataset_path = "D:/PWR/Praca magisterska/Dataset/data_with_features.csv"
         self.cleared_and_vectorized_dataset_path = "D:/PWR/Praca magisterska/Dataset/cleared_dataset_mal_url.csv"
 
+        # self.base_dataset_path = "/mnt/d/PWR/Praca magisterska/Dataset/dataset_mal.csv"
+        # self.features_selected_dataset_path = "/mnt/d/PWR/Praca magisterska/Dataset/data_with_features.csv"
+        # self.cleared_and_vectorized_dataset_path = "/mnt/d/PWR/Praca magisterska/Dataset/cleared_dataset_mal_url.csv"
+
+        self.cleared_full_data = "D:/PWR/Praca magisterska/Dataset/dataset_mal_clear.csv"
+        #self.cleared_full_data = "/mnt/d/PWR/Praca magisterska/Dataset/dataset_mal_clear.csv"
+
         self.data_for_train_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
         self.data_for_test_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
 
-        self.data_full = self.read_data(self.base_dataset_path)
-        self.data_features_selected = self.read_data(self.features_selected_dataset_path)
-        self.cleared_and_vectorized_data = self.read_data(self.cleared_and_vectorized_dataset_path)
+        # self.data_for_train_model = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
+        # self.data_for_test_model = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
+
+
+        self.data_for_train_model_base = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
+        self.data_for_test_model_base = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
+
+        # self.data_for_train_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
+        # self.data_for_test_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
+
+        #self.data_full = self.read_data(self.base_dataset_path)
+        #self.clear_data_full_df = self.read_data(self.cleared_full_data)
+        #self.data_features_selected = self.read_data(self.features_selected_dataset_path)
+        #self.cleared_and_vectorized_data = self.read_data(self.cleared_and_vectorized_dataset_path)
 
         self.full_train = self.read_data(self.data_for_train_model)
         self.full_test = self.read_data(self.data_for_test_model)
+
+        self.full_train_base = self.read_data(self.data_for_train_model_base)
+        self.full_test_base = self.read_data(self.data_for_test_model_base)
 
         self.LogCreator = LogFileCreator(log_filename)
         self.SUSPICIOUS_WORDS = {"login", "secure", "verify", "update", "password", "PayPal", "signin", "bank", "account", "update",
@@ -484,6 +505,14 @@ class DataPreprocessing:
         self.print_dataset_info(data)
         return data
 
+    def clear_empty_values_and_save_full_dataset(self):
+        df = self.data_full.copy()
+        df = self.change_data_labels(df)
+        valid_types = {0, 1, 2, 3}
+        df = df[df['type'].isin(valid_types)]
+        df.dropna()
+        df.to_csv(self.cleared_full_data, index=False)
+
     def clear_and_vectorize_finally_dataset(self, data):
         dataset_form_file = self.data_features_selected.copy()
         self.LogCreator.print_and_write_log("Start of full data cleansing")
@@ -692,6 +721,6 @@ class DataPreprocessing:
             train_data = full_data.iloc[train_idx]
             test_data = full_data.iloc[test_idx]
 
-        train_data.to_csv(self.data_for_train_model, index=False)
-        test_data.to_csv(self.data_for_test_model, index=False)
+        train_data.to_csv(self.data_for_train_model_base, index=False)
+        test_data.to_csv(self.data_for_test_model_base, index=False)
         print("Completed split datasets!")
