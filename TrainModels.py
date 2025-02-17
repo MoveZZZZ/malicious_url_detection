@@ -9,7 +9,7 @@ from tensorflow.keras import models
 from tensorflow.keras.utils import to_categorical
 import time
 import tensorflow as tf
-
+from CustomModels import Optimization
 from transformers import BertTokenizer
 import torch
 
@@ -23,10 +23,11 @@ class TrainModels:
         self._TrainTestDataPreproc = TrainTestDataPreprocessing(log_filename)
         self._ModelNameAndPathesCreator = ModelNameAndPathesCreator(log_filename)
         self.CM_and_ROC_creator = CM_and_ROC_creator(log_filename)
+        self._Optimization = Optimization()
         print(tf.config.list_physical_devices('GPU'))
         print(torch.backends.cudnn.version())
 
-    def data_pathes_and_model_creation(self, option, model_name, _activation_function, _optimizer):
+    def data_pathes_and_model_creation(self, option, model_name, _activation_function, _optimizer, _num_centres):
         if model_name == "bert2":
             data = self._DataPreprocessing.full_train_base.copy()
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
@@ -40,7 +41,7 @@ class TrainModels:
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
             input_size = X.shape[1]
             X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y, 0.2,42)
-            model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer, input_size)
+            model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer, _num_centres ,input_size)
             scaler = self._TrainTestDataPreproc.create_scaler(X)
             X_train, X_test = self._TrainTestDataPreproc.scale_data(scaler, X_train_without_saler, X_test_without_saler)
             X_train = X_train.to_numpy()
@@ -81,11 +82,11 @@ class TrainModels:
 
         # Вывод стандартного summary
         print(model.model.summary())
-    def train_model(self, option, model_name, _activation_function, _optimizer, _epochs = 1):
+    def train_model(self, option, model_name, _activation_function, _optimizer, _epochs = 1, _num_centres=10):
         self.LogCreator.print_and_write_log(f"Train {model_name} with using {self._ModelNameAndPathesCreator.define_type_of_option(option)}\n"
                                             f"{self.LogCreator.string_spit_tilds}")
 
-        model, save_file_name, X_train, X_test, y_train, y_test, scaler = self.data_pathes_and_model_creation(option, model_name, _activation_function, _optimizer)
+        model, save_file_name, X_train, X_test, y_train, y_test, scaler = self.data_pathes_and_model_creation(option, model_name, _activation_function, _optimizer, _num_centres)
 
         self.LogCreator.print_and_write_log(f"Start learn model {model_name}")
         model_train_time_start = time.time()
@@ -95,7 +96,10 @@ class TrainModels:
                 y_train = to_categorical(y_train, num_classes=4)
                 y_test = to_categorical(y_test, num_classes=4)
             early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3, restore_best_weights=True)
-            model.compile(optimizer=_optimizer, loss = 'categorical_crossentropy', metrics = ['accuracy'])
+            #'categorical_crossentropy'
+            print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+            print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
+            model.compile(optimizer=_optimizer, loss = self._Optimization.focal_loss(), metrics = ['accuracy'])
             self.print_model_summary(model)
             history = model.fit(X_train, y_train, epochs=_epochs, batch_size=32, validation_data=(X_test, y_test),
                       verbose=1, callbacks=[early_stopping])

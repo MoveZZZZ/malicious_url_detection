@@ -1,6 +1,6 @@
 from LogSystem import LogFileCreator
 import torch
-from CustomModels import DeepMLP_3, DeepMLP_5, GNN
+from CustomModels import DeepMLP_3, DeepMLP_5, GNN, RBFN
 from sklearn.ensemble import RandomForestClassifier
 from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
@@ -11,7 +11,7 @@ class ModelNameAndPathesCreator:
     def __init__(self, log_filename):
         self.LogCreator = LogFileCreator(log_filename)
 
-    def create_model_name_and_output_pathes(self, option, model_name, _activation_function='relu', _optimizer='adam', input_size=None, num_classes=4):
+    def create_model_name_and_output_pathes(self, option, model_name, _activation_function='relu', _optimizer='adam', _num_centres=10, input_size=None ,num_classes=4):
         model = None
         end_file_name = self.define_type_of_option(option)
 
@@ -49,13 +49,13 @@ class ModelNameAndPathesCreator:
             save_file_name = f"TabNetClassifier_{end_file_name}"
         elif model_name == "deep_mlp_3":
             if input_size is None:
-                raise ValueError("DeepMLP requires input_size to be specified")
+                raise ValueError("DeepMLP_3 requires input_size to be specified")
             model = DeepMLP_3(input_size, num_classes, _activation_function)
             model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
             save_file_name = f"DeepMLP_3_layer_{end_file_name}_{_optimizer}_{_activation_function}"
         elif model_name == "deep_mlp_5":
             if input_size is None:
-                raise ValueError("DeepMLP requires input_size to be specified")
+                raise ValueError("DeepMLP_5 requires input_size to be specified")
             model = DeepMLP_5(input_size, num_classes, _activation_function)
             #model.compile(optimizer=_optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
             save_file_name = f"DeepMLP_5_layer_{end_file_name}_{_optimizer}_{_activation_function}"
@@ -65,6 +65,11 @@ class ModelNameAndPathesCreator:
             model = GNN(input_size, 128, num_classes, _activation_function)
             #model.compile(optimizer=_optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
             save_file_name = f"GNN_{end_file_name}_{_optimizer}_{_activation_function}"
+        elif model_name == "rbfn":
+            if input_size is None:
+                raise ValueError("RBFN requires input_size to be specified")
+            model = RBFN(num_classes, _num_centres)
+            save_file_name = f"RBFN_{end_file_name}_{_optimizer}"
         elif model_name == "bert2":
             model = TFBertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_classes)
             save_file_name = f"BERT_{end_file_name}"
