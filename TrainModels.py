@@ -27,7 +27,7 @@ class TrainModels:
         print(tf.config.list_physical_devices('GPU'))
         print(torch.backends.cudnn.version())
 
-    def data_pathes_and_model_creation(self, option, model_name, _activation_function, _optimizer, _num_centres):
+    def data_pathes_and_model_creation(self, option, model_name, _activation_function, _optimizer, _num_centres, _encoding_dim_AE):
         if model_name == "bert2":
             data = self._DataPreprocessing.full_train_base.copy()
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
@@ -41,7 +41,8 @@ class TrainModels:
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
             input_size = X.shape[1]
             X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y, 0.2,42)
-            model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer, _num_centres ,input_size)
+            model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer,
+                                                                                                        _num_centres ,_encoding_dim_AE,input_size)
             scaler = self._TrainTestDataPreproc.create_scaler(X)
             X_train, X_test = self._TrainTestDataPreproc.scale_data(scaler, X_train_without_saler, X_test_without_saler)
             X_train = X_train.to_numpy()
@@ -51,11 +52,8 @@ class TrainModels:
     def print_model_summary(self, model):
         print(f"Optimizer: {model.optimizer.__class__.__name__}")
         print("Loss function:", model.loss)
-
-        # Проверяем, есть ли Sequential внутри кастомной модели
         for layer in model.layers:
             if isinstance(layer, tf.keras.Sequential):
-                # Если наткнулись на Sequential, выводим его внутренние слои
                 for sub_layer in layer.layers:
                     if isinstance(sub_layer, (tf.keras.layers.BatchNormalization, tf.keras.layers.Dropout)):
                         continue
@@ -68,7 +66,6 @@ class TrainModels:
                     if hasattr(sub_layer, 'units'):
                         print(f"   Units: {sub_layer.units}")
             else:
-                # Обычные слои
                 if isinstance(layer, (tf.keras.layers.BatchNormalization, tf.keras.layers.Dropout)):
                     continue
                 print(f"Layer: {layer.name}")
@@ -80,26 +77,30 @@ class TrainModels:
                 if hasattr(layer, 'units'):
                     print(f"   Units: {layer.units}")
 
-        # Вывод стандартного summary
-        print(model.model.summary())
-    def train_model(self, option, model_name, _activation_function, _optimizer, _epochs = 1, _num_centres=10):
+        if(model.name == "autoencoder_classifier"):
+            print(model.summary())
+        else:
+            print(model.model.summary())
+    def train_model(self, option, model_name, _activation_function, _optimizer, _epochs = 1, _num_centres_RBFL=10, _encoding_dim_AE = 10):
         self.LogCreator.print_and_write_log(f"Train {model_name} with using {self._ModelNameAndPathesCreator.define_type_of_option(option)}\n"
                                             f"{self.LogCreator.string_spit_tilds}")
 
-        model, save_file_name, X_train, X_test, y_train, y_test, scaler = self.data_pathes_and_model_creation(option, model_name, _activation_function, _optimizer, _num_centres)
+        model, save_file_name, X_train, X_test, y_train, y_test, scaler = self.data_pathes_and_model_creation(option, model_name,
+                                                                                                              _activation_function, _optimizer,
+                                                                                                              _num_centres_RBFL, _encoding_dim_AE)
 
         self.LogCreator.print_and_write_log(f"Start learn model {model_name}")
         model_train_time_start = time.time()
 
-        if isinstance(model, models.Model):
+        if isinstance(model, models.Model) and model_name !="AE":
             if y_train.ndim == 1:
                 y_train = to_categorical(y_train, num_classes=4)
                 y_test = to_categorical(y_test, num_classes=4)
             early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3, restore_best_weights=True)
-            #'categorical_crossentropy'
+            #'categorical_crossentropy' | self._Optimization.focal_loss()
             print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
             print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
-            model.compile(optimizer=_optimizer, loss = self._Optimization.focal_loss(), metrics = ['accuracy'])
+            model.compile(optimizer=_optimizer, loss = 'categorical_crossentropy', metrics = ['accuracy'])
             self.print_model_summary(model)
             history = model.fit(X_train, y_train, epochs=_epochs, batch_size=32, validation_data=(X_test, y_test),
                       verbose=1, callbacks=[early_stopping])
@@ -131,6 +132,33 @@ class TrainModels:
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)
+        elif model_name == "AE":
+            if y_train.ndim == 1:
+                y_train = to_categorical(y_train, num_classes=4)
+                y_test = to_categorical(y_test, num_classes=4)
+            early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_classifier_accuracy', patience=3, restore_best_weights=True, mode = "max")
+            model.compile(
+                optimizer=_optimizer,
+                loss={
+                    "decoder": "mse",
+                    "classifier": "categorical_crossentropy"
+                },
+                metrics={"classifier": ["accuracy"]}
+            )
+            self.print_model_summary(model)
+            history = model.fit(
+                X_train,
+                {"decoder": X_train, "classifier": y_train},
+                epochs=_epochs,
+                batch_size=32,
+                validation_data=(X_test, {"decoder": X_test, "classifier": y_test}),
+                verbose=1,
+                callbacks=[early_stopping]
+            )
+            self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
+            self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
+            self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)
+            self.check_test_data_custom(model, scaler, save_file_name)
         else:
             y_train = y_train.to_numpy()
             y_test = y_test.to_numpy()

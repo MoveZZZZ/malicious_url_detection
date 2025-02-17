@@ -108,6 +108,36 @@ class RBFN(models.Model):
 
     def call(self, inputs, training=False):
         return self.model(inputs)
+class AutoencoderClassifier(models.Model):
+    def __init__(self, input_size, encoding_dim, num_classes, _activation='relu'):
+        super(AutoencoderClassifier, self).__init__()
+
+        # Encoder
+        self.encoder = tf.keras.Sequential([
+            layers.Dense(256, activation=_activation, input_shape=(input_size,)),
+            layers.BatchNormalization(),
+            layers.Dropout(0.2),
+            layers.Dense(encoding_dim, activation=_activation)
+        ])
+        self.decoder = tf.keras.Sequential([
+            layers.Dense(256, activation=_activation, input_shape=(encoding_dim,)),
+            layers.BatchNormalization(),
+            layers.Dropout(0.2),
+            layers.Dense(input_size, activation='sigmoid')
+        ])
+        self.classifier = tf.keras.Sequential([
+            layers.Dense(128, activation=_activation, input_shape=(encoding_dim,)),
+            layers.BatchNormalization(),
+            layers.Dropout(0.2),
+            layers.Dense(num_classes, activation='softmax')
+        ])
+
+    def call(self, inputs, training=False):
+        encoded = self.encoder(inputs)
+        decoded = self.decoder(encoded)
+        classification = self.classifier(encoded)
+        return {"decoder": decoded, "classifier": classification}
+
 
 class Optimization:
     @staticmethod
