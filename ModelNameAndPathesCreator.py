@@ -11,7 +11,7 @@ class ModelNameAndPathesCreator:
     def __init__(self, log_filename):
         self.LogCreator = LogFileCreator(log_filename)
 
-    def create_model_name_and_output_pathes(self, option, model_name, input_size=None, num_classes=4):
+    def create_model_name_and_output_pathes(self, option, model_name, _activation_function='relu', _optimizer='adam', input_size=None, num_classes=4):
         model = None
         end_file_name = self.define_type_of_option(option)
 
@@ -50,21 +50,21 @@ class ModelNameAndPathesCreator:
         elif model_name == "deep_mlp_3":
             if input_size is None:
                 raise ValueError("DeepMLP requires input_size to be specified")
-            model = DeepMLP_3(input_size, num_classes)
+            model = DeepMLP_3(input_size, num_classes, _activation_function)
             model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-            save_file_name = f"DeepMLP_3_layer_{end_file_name}"
+            save_file_name = f"DeepMLP_3_layer_{end_file_name}_{_optimizer}_{_activation_function}"
         elif model_name == "deep_mlp_5":
             if input_size is None:
                 raise ValueError("DeepMLP requires input_size to be specified")
-            model = DeepMLP_5(input_size, num_classes)
-            model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-            save_file_name = f"DeepMLP_5_layer_{end_file_name}"
+            model = DeepMLP_5(input_size, num_classes, _activation_function)
+            #model.compile(optimizer=_optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+            save_file_name = f"DeepMLP_5_layer_{end_file_name}_{_optimizer}_{_activation_function}"
         elif model_name == "gnn":
             if input_size is None:
                 raise ValueError("GNN requires input_size to be specified")
-            model = GNN(input_size, 128, num_classes)
-            model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-            save_file_name = f"GNN_{end_file_name}"
+            model = GNN(input_size, 128, num_classes, _activation_function)
+            #model.compile(optimizer=_optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+            save_file_name = f"GNN_{end_file_name}_{_optimizer}_{_activation_function}"
         elif model_name == "bert2":
             model = TFBertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_classes)
             save_file_name = f"BERT_{end_file_name}"

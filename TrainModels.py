@@ -26,13 +26,13 @@ class TrainModels:
         print(tf.config.list_physical_devices('GPU'))
         print(torch.backends.cudnn.version())
 
-    def data_pathes_and_model_creation(self, option, model_name):
+    def data_pathes_and_model_creation(self, option, model_name, _activation_function, _optimizer):
         if model_name == "bert2":
             data = self._DataPreprocessing.full_train_base.copy()
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
             tokenizer_model_name = "bert-base-uncased"
             tokenizer = BertTokenizer.from_pretrained(tokenizer_model_name)
-            model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name)
+            model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer)
             X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.prepare_data_bert_2(X, y, tokenizer)
             scaler = None
         else:
@@ -40,17 +40,52 @@ class TrainModels:
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
             input_size = X.shape[1]
             X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y, 0.2,42)
-            model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, input_size)
+            model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer, input_size)
             scaler = self._TrainTestDataPreproc.create_scaler(X)
             X_train, X_test = self._TrainTestDataPreproc.scale_data(scaler, X_train_without_saler, X_test_without_saler)
             X_train = X_train.to_numpy()
             X_test = X_test.to_numpy()
         return model, save_file_name, X_train, X_test, y_train, y_test, scaler
-    def train_model(self, option, model_name):
+
+    def print_model_summary(self, model):
+        print(f"Optimizer: {model.optimizer.__class__.__name__}")
+        print("Loss function:", model.loss)
+
+        # Проверяем, есть ли Sequential внутри кастомной модели
+        for layer in model.layers:
+            if isinstance(layer, tf.keras.Sequential):
+                # Если наткнулись на Sequential, выводим его внутренние слои
+                for sub_layer in layer.layers:
+                    if isinstance(sub_layer, (tf.keras.layers.BatchNormalization, tf.keras.layers.Dropout)):
+                        continue
+                    print(f"Layer: {sub_layer.name}")
+                    print(f"   Type: {type(sub_layer).__name__}")
+                    if hasattr(sub_layer, 'activation'):
+                        print(f"   Activation: {sub_layer.activation.__name__}")
+                    if hasattr(sub_layer, 'kernel_initializer'):
+                        print(f"   Kernel initializer: {sub_layer.kernel_initializer.__class__.__name__}")
+                    if hasattr(sub_layer, 'units'):
+                        print(f"   Units: {sub_layer.units}")
+            else:
+                # Обычные слои
+                if isinstance(layer, (tf.keras.layers.BatchNormalization, tf.keras.layers.Dropout)):
+                    continue
+                print(f"Layer: {layer.name}")
+                print(f"   Type: {type(layer).__name__}")
+                if hasattr(layer, 'activation'):
+                    print(f"   Activation: {layer.activation.__name__}")
+                if hasattr(layer, 'kernel_initializer'):
+                    print(f"   Kernel initializer: {layer.kernel_initializer.__class__.__name__}")
+                if hasattr(layer, 'units'):
+                    print(f"   Units: {layer.units}")
+
+        # Вывод стандартного summary
+        print(model.model.summary())
+    def train_model(self, option, model_name, _activation_function, _optimizer, _epochs = 1):
         self.LogCreator.print_and_write_log(f"Train {model_name} with using {self._ModelNameAndPathesCreator.define_type_of_option(option)}\n"
                                             f"{self.LogCreator.string_spit_tilds}")
 
-        model, save_file_name, X_train, X_test, y_train, y_test, scaler = self.data_pathes_and_model_creation(option, model_name)
+        model, save_file_name, X_train, X_test, y_train, y_test, scaler = self.data_pathes_and_model_creation(option, model_name, _activation_function, _optimizer)
 
         self.LogCreator.print_and_write_log(f"Start learn model {model_name}")
         model_train_time_start = time.time()
@@ -60,8 +95,9 @@ class TrainModels:
                 y_train = to_categorical(y_train, num_classes=4)
                 y_test = to_categorical(y_test, num_classes=4)
             early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3, restore_best_weights=True)
-            model.compile(optimizer=tf.keras.optimizers.Adam(), loss = 'categorical_crossentropy', metrics = ['accuracy'])
-            history = model.fit(X_train, y_train, epochs=15, batch_size=32, validation_data=(X_test, y_test),
+            model.compile(optimizer=_optimizer, loss = 'categorical_crossentropy', metrics = ['accuracy'])
+            self.print_model_summary(model)
+            history = model.fit(X_train, y_train, epochs=_epochs, batch_size=32, validation_data=(X_test, y_test),
                       verbose=1, callbacks=[early_stopping])
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
@@ -75,20 +111,19 @@ class TrainModels:
                 eval_set=[(X_test, y_test)],
                 eval_metric=["accuracy"],
                 batch_size=256,
-                max_epochs = 1,
+                max_epochs = _epochs,
                 patience=5,
             )
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
         elif model_name == "bert2":
             batch_size = 16
-            epochs = 2
             loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
             model.compile(optimizer="adamw", loss=loss_fn, metrics=["accuracy"])
             history = model.fit(
                 [X_train["input_ids"], X_train["attention_mask"]], y_train,
                 validation_data=([X_test["input_ids"], X_test["attention_mask"]], y_test),
-                batch_size=batch_size, epochs=epochs)
+                batch_size=batch_size, epochs=_epochs)
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)
