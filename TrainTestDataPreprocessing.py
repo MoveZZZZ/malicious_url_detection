@@ -19,6 +19,14 @@ class TrainTestDataPreprocessing:
         y = data['type']
         return X,y
 
+    def compute_class_weights(self, y_train):
+        unique_classes, class_counts = np.unique(y_train, return_counts=True)
+        total_samples = np.sum(class_counts)
+        class_weights = {cls: total_samples / (len(unique_classes) * count) for cls, count in zip(unique_classes, class_counts)}
+        weights_array = np.array([class_weights[i] if i in class_weights else 1.0 for i in range(len(class_weights))], dtype=np.float32)
+        print(f"Class distribution: 0={class_counts[0]}, 1={class_counts[1]}, 2={class_counts[2]}, 3={class_counts[3]}")
+        return tf.constant(weights_array, dtype=tf.float32)
+
     def check_class_balance(self, y):
         self.LogCreator.print_and_write_log("Checking class distribution...")
         self.LogCreator.print_and_write_log("Class distribution:", Counter(y))

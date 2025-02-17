@@ -155,3 +155,12 @@ class Optimization:
             loss = -alpha * tf.pow(1. - pt, gamma) * tf.math.log(pt + tf.keras.backend.epsilon())
             return tf.reduce_mean(loss)
         return loss
+
+    @staticmethod
+    def weighted_categorical_crossentropy(class_weights):
+        def loss(y_true, y_pred):
+            y_true = tf.keras.backend.cast(y_true, dtype=tf.float32)
+            weights = tf.reduce_sum(class_weights * y_true, axis=-1, keepdims=True)
+            cross_entropy = tf.keras.losses.categorical_crossentropy(y_true, y_pred)
+            return tf.keras.backend.mean(weights * cross_entropy)
+        return loss

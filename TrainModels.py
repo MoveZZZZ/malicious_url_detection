@@ -91,13 +91,13 @@ class TrainModels:
 
         self.LogCreator.print_and_write_log(f"Start learn model {model_name}")
         model_train_time_start = time.time()
-
+        class_weights = self._TrainTestDataPreproc.compute_class_weights(y_train)
         if isinstance(model, models.Model) and model_name !="AE":
             if y_train.ndim == 1:
                 y_train = to_categorical(y_train, num_classes=4)
                 y_test = to_categorical(y_test, num_classes=4)
             early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3, restore_best_weights=True)
-            #'categorical_crossentropy' | self._Optimization.focal_loss()
+            #'categorical_crossentropy' | self._Optimization.focal_loss() | self._Optimization.weighted_categorical_crossentropy(class_weights)
             print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
             print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
             model.compile(optimizer=_optimizer, loss = 'categorical_crossentropy', metrics = ['accuracy'])
@@ -141,7 +141,7 @@ class TrainModels:
                 optimizer=_optimizer,
                 loss={
                     "decoder": "mse",
-                    "classifier": self._Optimization.focal_loss()
+                    "classifier": 'categorical_crossentropy'
                 },
                 metrics={"classifier": ["accuracy"]}
             )
