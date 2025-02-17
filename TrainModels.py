@@ -141,7 +141,7 @@ class TrainModels:
                 optimizer=_optimizer,
                 loss={
                     "decoder": "mse",
-                    "classifier": "categorical_crossentropy"
+                    "classifier": self._Optimization.focal_loss()
                 },
                 metrics={"classifier": ["accuracy"]}
             )
@@ -158,7 +158,6 @@ class TrainModels:
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)
-            self.check_test_data_custom(model, scaler, save_file_name)
         else:
             y_train = y_train.to_numpy()
             y_test = y_test.to_numpy()

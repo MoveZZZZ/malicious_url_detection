@@ -5,7 +5,7 @@ from sklearn.preprocessing import label_binarize
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, roc_curve, auc, mean_squared_error, mean_absolute_error,accuracy_score
 from LogSystem import LogFileCreator
 import tensorflow as tf
-import CustomModels
+from CustomModels import *
 
 class CM_and_ROC_creator:
     def __init__(self, log_filename):
@@ -26,8 +26,7 @@ class CM_and_ROC_creator:
         }
 
     def create_confusion_matrix(self, model, X_test, y_test, save_file_name):
-
-        if(type(model).__name__ == "TFBertForSequenceClassification"):
+        if type(model).__name__ == "TFBertForSequenceClassification":
             pred_probs = model.predict([X_test["input_ids"], X_test["attention_mask"]])
             logits = pred_probs.logits
             print("Shape of logits:", logits.shape)
@@ -36,27 +35,40 @@ class CM_and_ROC_creator:
             else:
                 print("Predictions seem to be 1-dimensional, please check the model output.")
                 pred = logits
-            #num_classes = model.config.num_labels
             try:
                 acc = model.score(X_test, y_test)
             except:
                 acc = accuracy_score(y_test, pred)
         elif hasattr(model, "evaluate"):
-            acc = model.evaluate(X_test, y_test, verbose=0)[1]
-            pred = np.argmax(model.predict(X_test), axis=1)
-            #num_classes = len(np.unique(y_test))
-            if len(y_test.shape) > 1 and y_test.shape[1] > 1:
-                y_test = np.argmax(y_test, axis=1)
-
+            if isinstance(model, AutoencoderClassifier):
+                y_pred_dict = model.predict(X_test)
+                y_pred = y_pred_dict["classifier"]
+                pred = np.argmax(y_pred, axis=1)
+                eval_results = model.evaluate(X_test, {"decoder": X_test, "classifier": y_test}, verbose=0)
+                if "classifier_accuracy" in model.metrics_names:
+                    acc = eval_results[model.metrics_names.index("classifier_accuracy")]
+                else:
+                    y_pred_dict = model.predict(X_test)
+                    y_pred = np.argmax(y_pred_dict["classifier"], axis=1)
+                    y_true = np.argmax(y_test, axis=1) if y_test.ndim > 1 else y_test
+                    acc = accuracy_score(y_true, y_pred)
+            else:
+                acc = model.evaluate(X_test, y_test, verbose=0)[1]
+                pred = np.argmax(model.predict(X_test), axis=1)
+                if len(y_test.shape) > 1 and y_test.shape[1] > 1:
+                    y_test = np.argmax(y_test, axis=1)
         else:
             pred = model.predict(X_test)
-            #num_classes = len(model.classes_)
             try:
                 acc = model.score(X_test, y_test)
             except:
                 acc = accuracy_score(y_test, pred)
+
         num_classes = 4
-        sensitivity = recall_score(y_test, pred, average='macro', pos_label=1)
+        if len(y_test.shape) > 1 and y_test.shape[1] > 1:
+            y_test = np.argmax(y_test, axis=1)
+
+        sensitivity = recall_score(y_test, pred, average='macro')
         f1 = f1_score(y_test, pred, average='macro')
         cm = confusion_matrix(y_test, pred, labels=list(self.label_mapping_url.values()))
         fig, ax = plt.subplots(figsize=(15, 15))
@@ -72,9 +84,7 @@ class CM_and_ROC_creator:
         model_error = mean_absolute_error(y_test, pred)
         metrics_text = f"Acc: {acc:.4f} | Sens: {sensitivity:.4f} | F1: {f1:.4f}\nEPE (MSE): {epe:.4f} | Błąd (MAE): {model_error:.4f}\n"
 
-
         total_fpr, total_fnr, total_specificity = 0, 0, 0
-
         for i in range(num_classes):
             tn = cm.sum() - cm[i, :].sum() - cm[:, i].sum() + cm[i, i]
             fp = cm[:, i].sum() - cm[i, i]
@@ -108,31 +118,22 @@ class CM_and_ROC_creator:
         plt.close()
 
     def create_ROC(self, model, X_test, y_test, save_file_name):
-        if type(model).__name__ == "TFBertForSequenceClassification":
-            logits = model.predict([X_test["input_ids"], X_test["attention_mask"]]).logits
-            y_prob = tf.nn.softmax(logits, axis=1).numpy()
-            n_classes = model.config.num_labels
-            y_test_binarized = label_binarize(y_test, classes=np.arange(n_classes))
+        if isinstance(model, AutoencoderClassifier):
+            y_prob = model.predict(X_test)["classifier"]
         elif hasattr(model, "predict_proba"):
             y_prob = model.predict_proba(X_test)
-            if len(y_test.shape) > 1 and y_test.shape[1] > 1:
-                y_test_binarized = y_test  # Уже в one-hot
-            else:
-                classes = np.unique(y_test)
-                y_test_binarized = label_binarize(y_test, classes=classes)
         elif hasattr(model, "predict"):
             y_prob = model.predict(X_test)
-            if len(y_test.shape) > 1 and y_test.shape[1] > 1:
-                y_test_binarized = y_test
-            else:
-                classes = np.unique(y_test)
-                y_test_binarized = label_binarize(y_test, classes=classes)
         else:
             raise ValueError("Unsupported model type")
-        n_classes = 4
-        fpr = {}
-        tpr = {}
-        roc_auc = {}
+
+        if len(y_test.shape) > 1 and y_test.shape[1] > 1:
+            y_test_binarized = y_test
+        else:
+            classes = np.unique(y_test)
+            y_test_binarized = label_binarize(y_test, classes=classes)
+        n_classes = y_test_binarized.shape[1]
+        fpr, tpr, roc_auc = {}, {}, {}
         for i in range(n_classes):
             fpr[i], tpr[i], _ = roc_curve(y_test_binarized[:, i], y_prob[:, i])
             roc_auc[i] = auc(fpr[i], tpr[i])
@@ -155,36 +156,50 @@ class CM_and_ROC_creator:
         plt.savefig(f"{self.ROC_path}/{save_file_name}_roc_curve.png", bbox_inches='tight')
         plt.close()
 
-    def create_plot_traning_history (self, model_name, history, save_file_name, model = None):
+    def create_plot_traning_history(self, model_name, history, save_file_name, model=None):
         if model_name != "tabnet":
-            train_loss = history.history['loss']
-            val_loss = history.history['val_loss']
-            train_acc = history.history['accuracy']
-            val_acc = history.history['val_accuracy']
+            train_loss = history.history.get('loss', [])
+            val_loss = history.history.get('val_loss', [])
+            train_decoder_loss = history.history.get('decoder_loss', [])
+            val_decoder_loss = history.history.get('val_decoder_loss', [])
+            train_classifier_acc = history.history.get('classifier_accuracy', [])
+            val_classifier_acc = history.history.get('val_classifier_accuracy', [])
         else:
             train_loss = model.history_['loss']
             val_loss = model.history_['val_loss']
-            train_acc = model.history_['train_accuracy']
-            val_acc = model.history_['valid_accuracy']
+            train_decoder_loss, val_decoder_loss = None, None
+            train_classifier_acc, val_classifier_acc = None, None
+
+
+        if len(train_loss) == 0 or len(val_loss) == 0:
+            print("No loss data found, skipping plot generation.")
+            return
+
         epochs = range(1, len(train_loss) + 1)
-
-        plt.figure(figsize=(12, 6))
-
-        plt.subplot(1, 2, 1)
-        plt.plot(epochs, train_loss, 'r', label='Training loss for')
-        plt.plot(epochs, val_loss, 'b', label='Validation loss')
+        plt.figure(figsize=(18, 10))
+        plt.subplot(2, 2, 1)
+        plt.plot(epochs, train_loss, 'r', label='Training Loss')
+        plt.plot(epochs, val_loss, 'b', label='Validation Loss')
         plt.title(f'Training and Validation Loss for {model_name}')
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
         plt.legend()
-
-        plt.subplot(1, 2, 2)
-        plt.plot(epochs, train_acc, 'r', label='Training accuracy')
-        plt.plot(epochs, val_acc, 'b', label='Validation accuracy')
-        plt.title(f'Training and Validation Accuracy for {model_name}')
-        plt.xlabel('Epochs')
-        plt.ylabel('Accuracy')
-        plt.legend()
+        if len(train_decoder_loss) > 0 and len(val_decoder_loss) > 0:
+            plt.subplot(2, 2, 2)
+            plt.plot(epochs, train_decoder_loss, 'r', label='Training Decoder Loss')
+            plt.plot(epochs, val_decoder_loss, 'b', label='Validation Decoder Loss')
+            plt.title(f'Decoder Loss for {model_name}')
+            plt.xlabel('Epochs')
+            plt.ylabel('Loss')
+            plt.legend()
+        if len(train_classifier_acc) > 0 and len(val_classifier_acc) > 0:
+            plt.subplot(2, 2, 3)
+            plt.plot(epochs, train_classifier_acc, 'r', label='Training Classifier Accuracy')
+            plt.plot(epochs, val_classifier_acc, 'b', label='Validation Classifier Accuracy')
+            plt.title(f'Classifier Accuracy for {model_name}')
+            plt.xlabel('Epochs')
+            plt.ylabel('Accuracy')
+            plt.legend()
 
         plt.tight_layout()
         plt.savefig(f"{self.train_history_path}/{save_file_name}_th.png", bbox_inches='tight')
