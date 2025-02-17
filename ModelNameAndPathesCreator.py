@@ -1,6 +1,6 @@
 from LogSystem import LogFileCreator
 import torch
-from CustomModels import DeepMLP, GNN, BERTClassifier
+from CustomModels import DeepMLP_3, DeepMLP_5, GNN
 from sklearn.ensemble import RandomForestClassifier
 from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
@@ -47,19 +47,25 @@ class ModelNameAndPathesCreator:
 
             )
             save_file_name = f"TabNetClassifier_{end_file_name}"
-        elif model_name == "deep_mlp":
+        elif model_name == "deep_mlp_3":
             if input_size is None:
                 raise ValueError("DeepMLP requires input_size to be specified")
-            model = DeepMLP(input_size, num_classes)
+            model = DeepMLP_3(input_size, num_classes)
             model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-            save_file_name = f"DeepMLP_{end_file_name}"
+            save_file_name = f"DeepMLP_3_layer_{end_file_name}"
+        elif model_name == "deep_mlp_5":
+            if input_size is None:
+                raise ValueError("DeepMLP requires input_size to be specified")
+            model = DeepMLP_5(input_size, num_classes)
+            model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+            save_file_name = f"DeepMLP_5_layer_{end_file_name}"
         elif model_name == "gnn":
             if input_size is None:
                 raise ValueError("GNN requires input_size to be specified")
             model = GNN(input_size, 128, num_classes)
             model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
             save_file_name = f"GNN_{end_file_name}"
-        elif model_name == "bert":
+        elif model_name == "bert2":
             model = TFBertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_classes)
             save_file_name = f"BERT_{end_file_name}"
         else:

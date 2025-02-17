@@ -12,29 +12,29 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 class DataPreprocessing:
     def __init__(self, log_filename):
-        self.base_dataset_path = "D:/PWR/Praca magisterska/Dataset/dataset_mal.csv"
-        self.features_selected_dataset_path = "D:/PWR/Praca magisterska/Dataset/data_with_features.csv"
-        self.cleared_and_vectorized_dataset_path = "D:/PWR/Praca magisterska/Dataset/cleared_dataset_mal_url.csv"
+        # self.base_dataset_path = "D:/PWR/Praca magisterska/Dataset/dataset_mal.csv"
+        # self.features_selected_dataset_path = "D:/PWR/Praca magisterska/Dataset/data_with_features.csv"
+        # self.cleared_and_vectorized_dataset_path = "D:/PWR/Praca magisterska/Dataset/cleared_dataset_mal_url.csv"
 
-        # self.base_dataset_path = "/mnt/d/PWR/Praca magisterska/Dataset/dataset_mal.csv"
-        # self.features_selected_dataset_path = "/mnt/d/PWR/Praca magisterska/Dataset/data_with_features.csv"
-        # self.cleared_and_vectorized_dataset_path = "/mnt/d/PWR/Praca magisterska/Dataset/cleared_dataset_mal_url.csv"
+        self.base_dataset_path = "/mnt/d/PWR/Praca magisterska/Dataset/dataset_mal.csv"
+        self.features_selected_dataset_path = "/mnt/d/PWR/Praca magisterska/Dataset/data_with_features.csv"
+        self.cleared_and_vectorized_dataset_path = "/mnt/d/PWR/Praca magisterska/Dataset/cleared_dataset_mal_url.csv"
 
-        self.cleared_full_data = "D:/PWR/Praca magisterska/Dataset/dataset_mal_clear.csv"
-        #self.cleared_full_data = "/mnt/d/PWR/Praca magisterska/Dataset/dataset_mal_clear.csv"
+        #self.cleared_full_data = "D:/PWR/Praca magisterska/Dataset/dataset_mal_clear.csv"
+        self.cleared_full_data = "/mnt/d/PWR/Praca magisterska/Dataset/dataset_mal_clear.csv"
 
-        self.data_for_train_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
-        self.data_for_test_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
+        # self.data_for_train_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
+        # self.data_for_test_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
 
-        # self.data_for_train_model = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
-        # self.data_for_test_model = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
+        self.data_for_train_model = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
+        self.data_for_test_model = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
 
 
-        self.data_for_train_model_base = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
-        self.data_for_test_model_base = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
+        # self.data_for_train_model_base = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
+        # self.data_for_test_model_base = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
 
-        # self.data_for_train_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
-        # self.data_for_test_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
+        self.data_for_train_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
+        self.data_for_test_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
 
         #self.data_full = self.read_data(self.base_dataset_path)
         #self.clear_data_full_df = self.read_data(self.cleared_full_data)

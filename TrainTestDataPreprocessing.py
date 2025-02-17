@@ -4,6 +4,11 @@ import pandas as pd
 import time
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
+from collections import Counter
+from sklearn.feature_extraction.text import TfidfVectorizer
+from tqdm import tqdm
+import tensorflow as tf
+from scipy.sparse import hstack
 class TrainTestDataPreprocessing:
     def __init__(self, log_filename):
         self.LogCreator = LogFileCreator(log_filename)
@@ -14,7 +19,49 @@ class TrainTestDataPreprocessing:
         y = data['type']
         return X,y
 
+    def check_class_balance(self, y):
+        self.LogCreator.print_and_write_log("Checking class distribution...")
+        self.LogCreator.print_and_write_log("Class distribution:", Counter(y))
 
+    def tokenize_urls(self, urls, tokenizer, max_length=128):
+        self.LogCreator.print_and_write_log("Tokenizing URLs...")
+        if isinstance(urls, (np.ndarray, pd.Series)):
+            urls = urls.tolist()
+        elif not isinstance(urls, list):
+            urls = [str(url) for url in urls]
+        print(f"Type of input: {type(urls)}, Example: {urls[:3]}")
+        tokenized_data = {"input_ids": [], "attention_mask": []}
+
+        for url in tqdm(urls, desc="Tokenizing Progress"):
+            tokenized = tokenizer(url, padding="max_length", truncation=True, max_length=max_length,
+                                  return_tensors="tf")
+            tokenized_data["input_ids"].append(tokenized["input_ids"][0].numpy())
+            tokenized_data["attention_mask"].append(tokenized["attention_mask"][0].numpy())
+
+        tokenized_data["input_ids"] = tf.convert_to_tensor(tokenized_data["input_ids"])
+        tokenized_data["attention_mask"] = tf.convert_to_tensor(tokenized_data["attention_mask"])
+        self.LogCreator.print_and_write_log(f"Tokenized shape: input_ids={tokenized_data['input_ids'].shape}, attention_mask={tokenized_data['attention_mask'].shape}")
+        return tokenized_data
+
+    def extract_tfidf_features(self,urls):
+        self.LogCreator.print_and_write_log("Extracting TF-IDF features...")
+        vectorizer = TfidfVectorizer(analyzer="char", ngram_range=(2, 5))
+        features = vectorizer.fit_transform(urls)
+        self.LogCreator.print_and_write_log(f"TF-IDF shape: {features.shape}")
+        return features
+
+    def prepare_data_bert_2(self, X, y, tokenizer):
+        self.LogCreator.print_and_write_log("Preparing data...")
+        X_tokenized = self.tokenize_urls(X["url"], tokenizer)
+        #X_features = self.extract_tfidf_features(X["url"])
+        X_input_ids = X_tokenized["input_ids"].numpy()
+        X_input_att = X_tokenized["attention_mask"].numpy()
+        #X_combined = hstack([X_input_ids, X_features])
+        #print(f"Final feature shape: {X_combined.shape}")
+        X_train, X_test, y_train, y_test = self.split_data_for_train_and_validation_bert(X_input_ids, X_input_att, y, 0.2, 42)
+        for key, value in X_train.items():
+            print(f"{key} shape: {value.shape}")
+        return X_train, X_test, y_train, y_test
 
     def split_data_for_train_and_validation_bert(self,  X_input_ids, X_attention_mask, y, _test_size, _random_state):
         self.LogCreator.print_and_write_log("Start split data on train and test bert")
