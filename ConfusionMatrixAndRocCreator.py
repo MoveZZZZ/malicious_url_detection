@@ -156,19 +156,25 @@ class CM_and_ROC_creator:
         plt.savefig(f"{self.ROC_path}/{save_file_name}_roc_curve.png", bbox_inches='tight')
         plt.close()
 
-    def create_plot_traning_history(self, model_name, history, save_file_name, model=None):
-        if model_name != "tabnet":
+    def create_plot_traning_history(self, model_name, history, save_file_name):
+        if model_name == "tabnet":
+            print("Tabnet unsupported history!")
+            return
+        if model_name == "AE":
             train_loss = history.history.get('loss', [])
             val_loss = history.history.get('val_loss', [])
             train_decoder_loss = history.history.get('decoder_loss', [])
             val_decoder_loss = history.history.get('val_decoder_loss', [])
             train_classifier_acc = history.history.get('classifier_accuracy', [])
             val_classifier_acc = history.history.get('val_classifier_accuracy', [])
+            train_acc, val_acc = [], []
         else:
-            train_loss = model.history_['loss']
-            val_loss = model.history_['val_loss']
-            train_decoder_loss, val_decoder_loss = None, None
-            train_classifier_acc, val_classifier_acc = None, None
+            train_loss = history.history['loss']
+            val_loss = history.history['val_loss']
+            train_acc = history.history['accuracy']
+            val_acc = history.history['val_accuracy']
+            train_decoder_loss, val_decoder_loss = [], []
+            train_classifier_acc, val_classifier_acc = [], []
 
 
         if len(train_loss) == 0 or len(val_loss) == 0:
@@ -176,16 +182,27 @@ class CM_and_ROC_creator:
             return
 
         epochs = range(1, len(train_loss) + 1)
-        plt.figure(figsize=(18, 10))
-        plt.subplot(2, 2, 1)
-        plt.plot(epochs, train_loss, 'r', label='Training Loss')
-        plt.plot(epochs, val_loss, 'b', label='Validation Loss')
-        plt.title(f'Training and Validation Loss for {model_name}')
-        plt.xlabel('Epochs')
-        plt.ylabel('Loss')
-        plt.legend()
-        if len(train_decoder_loss) > 0 and len(val_decoder_loss) > 0:
+        if len(train_loss) > 0 and len(val_loss) > 0:
+            plt.figure(figsize=(12, 6))
+            plt.subplot(2, 2, 1)
+            plt.plot(epochs, train_loss, 'r', label='Training Loss')
+            plt.plot(epochs, val_loss, 'b', label='Validation Loss')
+            plt.title(f'Training and Validation Loss for {model_name}')
+            plt.xlabel('Epochs')
+            plt.ylabel('Loss')
+            plt.legend()
+
+        if len(train_acc) > 0 and len(val_acc) > 0:
             plt.subplot(2, 2, 2)
+            plt.plot(epochs, train_acc, 'r', label='Training accuracy')
+            plt.plot(epochs, val_acc, 'b', label='Validation accuracy')
+            plt.title('Training and Validation Accuracy')
+            plt.xlabel('Epochs')
+            plt.ylabel('Accuracy')
+            plt.legend()
+
+        if len(train_decoder_loss) > 0 and len(val_decoder_loss) > 0:
+            plt.subplot(2, 2, 3)
             plt.plot(epochs, train_decoder_loss, 'r', label='Training Decoder Loss')
             plt.plot(epochs, val_decoder_loss, 'b', label='Validation Decoder Loss')
             plt.title(f'Decoder Loss for {model_name}')
@@ -193,7 +210,7 @@ class CM_and_ROC_creator:
             plt.ylabel('Loss')
             plt.legend()
         if len(train_classifier_acc) > 0 and len(val_classifier_acc) > 0:
-            plt.subplot(2, 2, 3)
+            plt.subplot(2, 2, 4)
             plt.plot(epochs, train_classifier_acc, 'r', label='Training Classifier Accuracy')
             plt.plot(epochs, val_classifier_acc, 'b', label='Validation Classifier Accuracy')
             plt.title(f'Classifier Accuracy for {model_name}')

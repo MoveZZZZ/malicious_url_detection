@@ -9,6 +9,7 @@ import whois
 import tldextract
 from urllib.parse import urlparse
 from sklearn.model_selection import StratifiedShuffleSplit
+import requests
 
 class DataPreprocessing:
     def __init__(self, log_filename):
@@ -36,7 +37,7 @@ class DataPreprocessing:
         self.data_for_train_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
         self.data_for_test_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
 
-        #self.data_full = self.read_data(self.base_dataset_path)
+        self.data_full = self.read_data(self.base_dataset_path)
         #self.clear_data_full_df = self.read_data(self.cleared_full_data)
         #self.data_features_selected = self.read_data(self.features_selected_dataset_path)
         #self.cleared_and_vectorized_data = self.read_data(self.cleared_and_vectorized_dataset_path)
@@ -550,7 +551,8 @@ class DataPreprocessing:
         self.LogCreator.print_and_write_log(
             f"End get data features. Time to change: {self.LogCreator.count_time(start_time_to_get_features, end_time_to_get_features):.2f} s.\n"
             f"{self.LogCreator.string_spit_stars}")
-        _data.to_csv(self.features_selected_dataset_path, index=False)
+        print(_data["domain_age"].value_counts())
+        _data.to_csv(self.features_selected_dataset_path,index=False)
         self.LogCreator.print_and_write_log(f"File successfully saved to: {self.features_selected_dataset_path}")
 
     def extract_features(self, url):
@@ -693,9 +695,10 @@ class DataPreprocessing:
         prob = [float(url.count(c)) / len(url) for c in set(url)]
         return -sum(p * math.log2(p) for p in prob)
     def domain_age(self, url):
-        parsed_url = urlparse(url)
+        extracted = tldextract.extract(url)
+        domain = extracted.domain
         try:
-            domain_info = whois.whois(parsed_url.netloc)
+            domain_info = whois.whois(domain)
             creation_date = domain_info.creation_date
             if isinstance(creation_date, list):
                 creation_date = creation_date[0]

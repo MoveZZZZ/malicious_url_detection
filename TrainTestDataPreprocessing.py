@@ -9,6 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from tqdm import tqdm
 import tensorflow as tf
 from scipy.sparse import hstack
+from imblearn.over_sampling import SMOTE, ADASYN
 class TrainTestDataPreprocessing:
     def __init__(self, log_filename):
         self.LogCreator = LogFileCreator(log_filename)
@@ -132,3 +133,58 @@ class TrainTestDataPreprocessing:
             f"{self.LogCreator.string_spit_stars}"
         )
         return X_train_scaled, X_test_scaled
+
+    def option_preprocessing(self, option, X, y):
+        if option == 2:
+            X_resampled, y_resampled = self.smote_oversampling(X,y)
+        elif option == 3:
+            X_resampled, y_resampled = self.adasyn_oversampling(X,y)
+        else:
+            X_resampled = X
+            y_resampled = y
+        return X_resampled, y_resampled
+
+    def smote_oversampling(self, X, y, sampling_strategy='auto', random_state=42):
+        self.LogCreator.print_and_write_log(f"Start SMOTE oversampling\n"
+                                            f"Data before SMOTE_oversampling: {pd.Series(y).value_counts()}")
+        smote_start = time.time()
+        smote = SMOTE(sampling_strategy=sampling_strategy, random_state=random_state)
+        X_resampled, y_resampled = smote.fit_resample(X, y)
+        smote_end = time.time()
+        self.LogCreator.print_and_write_log(f"End SMOTE oversampling\n"
+                                            f"Data after SMOTE_oversampling: {pd.Series(y_resampled).value_counts()}\n"
+                                            f"Time to SMOTE_oversampling: {self.LogCreator.count_time(smote_start, smote_end):.2f} s.\n"
+                                            f"{self.LogCreator.string_spit_stars}")
+        return X_resampled, y_resampled
+
+
+    def adasyn_oversampling(self,X, y, sampling_strategy='auto', random_state=42):
+        self.LogCreator.print_and_write_log(f"Start ADASYN oversampling\n"
+                                            f"Data before ADASYN_oversampling: {pd.Series(y).value_counts()}")
+        adasyn_start = time.time()
+        class_counts = pd.Series(y).value_counts()
+        min_class_size = class_counts.min()
+        n_neighbors = min(min_class_size - 1, 5)
+        self.LogCreator.print_and_write_log(f"n_neigh = {n_neighbors}\n")
+        if n_neighbors < 1:
+            self.LogCreator.print_and_write_log(
+                "ADASYN cannot be applied due to insufficient class samples. Skipping oversampling."
+            )
+            return X, y
+        adasyn = ADASYN(sampling_strategy=sampling_strategy, random_state=random_state, n_neighbors=n_neighbors)
+        try:
+            X_resampled, y_resampled = adasyn.fit_resample(X, y)
+        except ValueError as e:
+            self.LogCreator.print_and_write_log(
+                f"ADASYN failed with error: {str(e)}. Returning original data."
+            )
+            return X, y
+        adasyn_end = time.time()
+        self.LogCreator.print_and_write_log(
+            f"End ADASYN oversampling\n"
+            f"Data after ADASYN_oversampling: {pd.Series(y_resampled).value_counts()}\n"
+            f"Time to ADASYN oversampling: {self.LogCreator.count_time(adasyn_start, adasyn_end):.2f} s.\n"
+            f"{self.LogCreator.string_spit_stars}"
+        )
+
+        return X_resampled, y_resampled

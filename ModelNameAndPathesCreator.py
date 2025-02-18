@@ -74,7 +74,7 @@ class ModelNameAndPathesCreator:
             if input_size is None:
                 raise ValueError("AE requires input_size to be specified")
             model = AutoencoderClassifier(input_size,_encoding_dim_AE, num_classes, _activation_function)
-            save_file_name = f"AutoencoderClassifier_{end_file_name}_{_activation_function}"
+            save_file_name = f"AutoencoderClassifier_{end_file_name}_{_optimizer}_{_activation_function}"
         elif model_name == "bert2":
             model = TFBertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_classes)
             save_file_name = f"BERT_{end_file_name}"
@@ -88,6 +88,7 @@ class ModelNameAndPathesCreator:
     def define_type_of_option(self, option):
         file_end_map = {
             1: "full_data",
-            2: "smote_oversampling"
+            2: "smote_oversampling",
+            3: "adasyn_oversampling"
         }
         return file_end_map.get(option, "UNKNOWN_OPTION")

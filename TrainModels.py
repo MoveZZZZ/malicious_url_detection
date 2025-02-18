@@ -13,7 +13,7 @@ from CustomModels import Optimization
 from transformers import BertTokenizer
 import torch
 
-
+import numpy as np
 
 
 class TrainModels:
@@ -26,6 +26,24 @@ class TrainModels:
         self._Optimization = Optimization()
         print(tf.config.list_physical_devices('GPU'))
         print(torch.backends.cudnn.version())
+    def clear_colums(self, data):
+        _data = data.copy()
+        print(f"col before: {len(_data.columns)}")
+        _data = _data.drop(columns=["url_entropy"])
+        _data = _data.drop(columns=["suspicious_tld"])
+        _data = _data.drop(columns=["c2_tld"])
+        _data = _data.drop(columns=["shortening_service"])
+        _data = _data.drop(columns=["contains_suspicious_words"])
+        _data = _data.drop(columns=["extract_root_domain_vector"])
+        _data = _data.drop(columns=["get_url_region_vector"])
+        # print(_data.groupby("type")["extract_root_domain_vector"].agg(["min", "max"]))
+        # print(_data.groupby("type")["get_url_region_vector"].agg(["min", "max"]))
+        # _data["extract_root_domain_vector"] = np.sqrt(_data["extract_root_domain_vector"])
+        # _data["get_url_region_vector"] = np.sqrt(_data["get_url_region_vector"])
+        # print(_data.groupby("type")["extract_root_domain_vector"].agg(["min", "max"]))
+        # print(_data.groupby("type")["get_url_region_vector"].agg(["min", "max"]))
+        print(f"col after: {len(_data.columns)}")
+        return _data
 
     def data_pathes_and_model_creation(self, option, model_name, _activation_function, _optimizer, _num_centres, _encoding_dim_AE):
         if model_name == "bert2":
@@ -38,15 +56,22 @@ class TrainModels:
             scaler = None
         else:
             data = self._DataPreprocessing.full_train.copy()
+            data =  self.clear_colums(data)
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
             input_size = X.shape[1]
             X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y, 0.2,42)
             model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer,
                                                                                                         _num_centres ,_encoding_dim_AE,input_size)
             scaler = self._TrainTestDataPreproc.create_scaler(X)
-            X_train, X_test = self._TrainTestDataPreproc.scale_data(scaler, X_train_without_saler, X_test_without_saler)
+            X_train_without_saler_end, y_train = self._TrainTestDataPreproc.option_preprocessing(option, X_train_without_saler, y_train)
+            X_train, X_test = self._TrainTestDataPreproc.scale_data(scaler, X_train_without_saler_end, X_test_without_saler)
             X_train = X_train.to_numpy()
             X_test = X_test.to_numpy()
+
+        print(f"X_train shape: {X_train.shape}")
+        print(f"y_train shape: {y_train.shape}")
+        print(f"X_test shape: {X_test.shape}")
+        print(f"y_test shape: {X_test.shape}")
         return model, save_file_name, X_train, X_test, y_train, y_test, scaler
 
     def print_model_summary(self, model):
@@ -77,18 +102,27 @@ class TrainModels:
                 if hasattr(layer, 'units'):
                     print(f"   Units: {layer.units}")
 
-        if(model.name == "autoencoder_classifier"):
-            print(model.summary())
-        else:
-            print(model.model.summary())
-    def train_model(self, option, model_name, _activation_function, _optimizer, _epochs = 1, _num_centres_RBFL=10, _encoding_dim_AE = 10):
+        # if(model.name == "autoencoder_classifier"):
+        #     print(model.summary())
+        # else:
+        #     print(model.model.summary())
+    def train_model(self, option, model_name, _activation_function, _optimizer, _epochs = 1, _num_centres_RBFL=10, _encoding_dim_AE = 10, _model_params_string=""):
+        txt = ""
+        if model_name == "AE":
+            txt = f"dim_AE = {_encoding_dim_AE}"
+        elif model_name == "RBFL":
+            txt = f"num_centres = {_num_centres_RBFL}"
+
         self.LogCreator.print_and_write_log(f"Train {model_name} with using {self._ModelNameAndPathesCreator.define_type_of_option(option)}\n"
+                                            f"Activation_function: {_activation_function}\n"
+                                            f"Optimizer: {_optimizer}\n"
+                                            f"{txt}\n"
                                             f"{self.LogCreator.string_spit_tilds}")
 
         model, save_file_name, X_train, X_test, y_train, y_test, scaler = self.data_pathes_and_model_creation(option, model_name,
                                                                                                               _activation_function, _optimizer,
                                                                                                               _num_centres_RBFL, _encoding_dim_AE)
-
+        save_file_name = save_file_name + f"_{_model_params_string}"
         self.LogCreator.print_and_write_log(f"Start learn model {model_name}")
         model_train_time_start = time.time()
         class_weights = self._TrainTestDataPreproc.compute_class_weights(y_train)
@@ -101,9 +135,20 @@ class TrainModels:
             print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
             print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
             model.compile(optimizer=_optimizer, loss = 'categorical_crossentropy', metrics = ['accuracy'])
-            self.print_model_summary(model)
+            #self.print_model_summary(model)
             history = model.fit(X_train, y_train, epochs=_epochs, batch_size=32, validation_data=(X_test, y_test),
                       verbose=1, callbacks=[early_stopping])
+
+            trained_epochs = len(history.epoch)
+            best_epoch = early_stopping.stopped_epoch if early_stopping.stopped_epoch > 0 else trained_epochs
+            self.LogCreator.print_and_write_log(
+                f"Model {model_name} Training Summary:\n"
+                f"Total Epochs: {_epochs}\n"
+                f"Trained Epochs: {trained_epochs}\n"
+                f"Best Epoch (EarlyStopping): {best_epoch if early_stopping.stopped_epoch > 0 else 'No EarlyStopping'}\n"
+                f"{self.LogCreator.string_spit_stars}"
+            )
+
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)
@@ -145,7 +190,7 @@ class TrainModels:
                 },
                 metrics={"classifier": ["accuracy"]}
             )
-            self.print_model_summary(model)
+            #self.print_model_summary(model)
             history = model.fit(
                 X_train,
                 {"decoder": X_train, "classifier": y_train},
@@ -155,6 +200,16 @@ class TrainModels:
                 verbose=1,
                 callbacks=[early_stopping]
             )
+            trained_epochs = len(history.epoch)
+            best_epoch = early_stopping.stopped_epoch if early_stopping.stopped_epoch > 0 else trained_epochs
+            self.LogCreator.print_and_write_log(
+                f"Model {model_name} Training Summary:\n"
+                f"Total Epochs: {_epochs}\n"
+                f"Trained Epochs: {trained_epochs}\n"
+                f"Best Epoch (EarlyStopping): {best_epoch if early_stopping.stopped_epoch > 0 else 'No EarlyStopping'}\n"
+                f"{self.LogCreator.string_spit_stars}"
+            )
+
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)
