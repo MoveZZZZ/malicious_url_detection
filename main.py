@@ -3,6 +3,17 @@ from DataPreprocessing import DataPreprocessing
 
 def main():
     #RFC, lgbm, xgb, mlp, tabnet, log_reg, deep_mlp_3, deep_mlp_5, gnn, rbfn
+    # options = (
+    #     1: "full_data",
+    #     2: "smote",
+    #     3: "adasyn",
+    #     91: "bert_features_full_data",
+    #     92: "bert_features_smote",
+    #     93: "bert_features_adasyn",
+    #     911: "bert_features_full_data_with_minmax_scaler",
+    #     912: "bert_features_smote_with_minmax_scaler",
+    #     913: "bert_features_smote_with_minmax_scaler"
+    # )
     #option, model_name, _activation_function, _optimizer, _epochs = 1, _num_centres=10
     log_filename = "AE_test_relu_selu_adam_sgd"
     _TrainModels = TrainModels(log_filename)

@@ -124,9 +124,9 @@ class TrainTestDataPreprocessing:
         return X_train_scaled, X_test_scaled
 
     def option_preprocessing(self, option, X, y):
-        if option == 2:
+        if option == 2 or option == 92 or option == 912:
             X_resampled, y_resampled = self.smote_oversampling(X,y)
-        elif option == 3:
+        elif option == 3 or option == 93 or option == 913:
             X_resampled, y_resampled = self.adasyn_oversampling(X,y)
         else:
             X_resampled = X
