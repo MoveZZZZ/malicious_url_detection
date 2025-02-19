@@ -42,7 +42,7 @@ class DataPreprocessing:
         #CLEAR DATASET WITH 768 BERT FEATURES
         self.bert_features_selected_768_dataset_path = self._select_path(
             win="D:/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768.csv",
-            lin="/mnt/d/PWR/Praca magisterska/Datasets/CUSTOM_FEATURES/768/dataset_with_bert_features_768.csv"
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768.csv"
         )
         #TRAIN SET BASE_DATASET
         self.train_cleared_base_dataset_path = self._select_path(
@@ -64,13 +64,20 @@ class DataPreprocessing:
             win="D:/PWR/Praca magisterska/Datasets/CUSTOM_FEATURES/CLEARED_AND_VECTORIZED/dataset_with_features_vectorized_test.csv",
             lin="/mnt/d/PWR/Praca magisterska/Datasets/CUSTOM_FEATURES/CLEARED_AND_VECTORIZED/dataset_with_features_vectorized_test.csv"
         )
-
-
+        self.train_bert_features_selected_768_dataset_path = self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768_train.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768_train.csv"
+        )
+        self.test_bert_features_selected_768_dataset_path = self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768_test.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768_test.csv"
+        )
 
         #self.base_dataset=self.read_data(self.base_dataset_path)
         self.cleared_base_dataset = self.read_data(self.cleared_base_dataset_path)
         #self.custom_fetures_seleted_dataset = self.read_data(self.custom_fetures_seleted_dataset_path)
         self.custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.custom_fetures_seleted_cleared_and_vetorized_dataset_path)
+        self.bert_features_selected_768_dataset = self.read_data(self.bert_features_selected_768_dataset_path)
 
 
         self.train_cleared_base_dataset = self.read_data(self.train_cleared_base_dataset_path)
@@ -548,12 +555,12 @@ class DataPreprocessing:
         url_list = data["url"].tolist()
         features = self.extract_features_bert(url_list)
         features = features.numpy()
-        types = data['type'].values()
+        types = data['type'].values
         num_samples, num_features = features.shape
         dataset = np.hstack((features, types.reshape((-1, 1))))
         columns = [f"feature_{i}" for i in range(num_features)] + ["type"]
         df = pd.DataFrame(dataset, columns=columns)
-        df.to_csv(self.bert_features_selected_768_dataset_path, index=False)
+        df.to_csv(self.bert_features_selected_768_dataset_path, index=False, header=True)
     def extract_features_bert(self, texts, batch_size=32):
         all_features = []
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -787,6 +794,7 @@ class DataPreprocessing:
         test_size = 0.1
         X = full_data.drop(columns=[label_column])
         y = full_data[label_column]
+        print(y.value_counts())
         strat_split = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=42)
 
         for train_idx, test_idx in strat_split.split(X, y):
@@ -795,6 +803,6 @@ class DataPreprocessing:
         self.print_dataset_info(full_data)
         self.print_dataset_info(train_data)
         self.print_dataset_info(test_data)
-        train_data.to_csv(self.train_custom_fetures_seleted_cleared_and_vetorized_dataset_path, index=False)
-        test_data.to_csv(self.test_custom_fetures_seleted_cleared_and_vetorized_dataset_path, index=False)
+        train_data.to_csv(self.train_bert_features_selected_768_dataset_path, index=False)
+        test_data.to_csv(self.test_bert_features_selected_768_dataset_path, index=False)
         print("Completed split datasets!")

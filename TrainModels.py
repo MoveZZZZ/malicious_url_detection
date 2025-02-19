@@ -3,8 +3,6 @@ from DataPreprocessing import DataPreprocessing
 from TrainTestDataPreprocessing import TrainTestDataPreprocessing
 from ModelNameAndPathesCreator import ModelNameAndPathesCreator
 from ConfusionMatrixAndRocCreator import CM_and_ROC_creator
-
-
 from tensorflow.keras import models
 from tensorflow.keras.utils import to_categorical
 import time
@@ -12,10 +10,6 @@ import tensorflow as tf
 from CustomModels import Optimization
 from transformers import BertTokenizer
 import torch
-
-import numpy as np
-import pandas as pd
-
 
 class TrainModels:
     def __init__(self, log_filename):
@@ -38,17 +32,58 @@ class TrainModels:
             X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.prepare_data_bert_2(X, y, tokenizer)
             scaler = None
         else:
-            data = self._DataPreprocessing.train_custom_fetures_seleted_cleared_and_vetorized_dataset.copy()
-            X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
-            input_size = X.shape[1]
-            X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y, 0.2,42)
-            model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer,
+            if option == 91 or option == 92 or option == 93:
+                data = self._DataPreprocessing.bert_features_selected_768_dataset.copy()
+                X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
+                input_size = X.shape[1]
+                X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y, 0.2,42)
+                model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer,
                                                                                                         _num_centres ,_encoding_dim_AE,input_size)
-            scaler = self._TrainTestDataPreproc.create_scaler(X)
-            X_train_without_saler_end, y_train = self._TrainTestDataPreproc.option_preprocessing(option, X_train_without_saler, y_train)
-            X_train, X_test = self._TrainTestDataPreproc.scale_data(scaler, X_train_without_saler_end, X_test_without_saler)
-            X_train = X_train.to_numpy()
-            X_test = X_test.to_numpy()
+                X_train = X_train.to_numpy()
+                X_test = X_test.to_numpy()
+                scaler = None
+            elif option == 911 or option == 912 or option == 913:
+                data = self._DataPreprocessing.bert_features_selected_768_dataset.copy()
+                X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
+                input_size = X.shape[1]
+                X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(
+                    X, y,
+                    0.2,
+                    42)
+                model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option,
+                                                                                                            model_name,
+                                                                                                            _activation_function,
+                                                                                                            _optimizer,
+                                                                                                            _num_centres,
+                                                                                                            _encoding_dim_AE,
+                                                                                                            input_size)
+                scaler = self._TrainTestDataPreproc.create_scaler(X)
+                X_train_without_saler_end, y_train = self._TrainTestDataPreproc.option_preprocessing(option,
+                                                                                                     X_train_without_saler,
+                                                                                                     y_train)
+                X_train, X_test = self._TrainTestDataPreproc.scale_data(scaler, X_train_without_saler_end,
+                                                                        X_test_without_saler)
+                X_train = X_train.to_numpy()
+                X_test = X_test.to_numpy()
+            else:
+                data = self._DataPreprocessing.train_custom_fetures_seleted_cleared_and_vetorized_dataset.copy()
+                X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
+                input_size = X.shape[1]
+                X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y,
+                                                                                                                  0.2,
+                                                                                                                  42)
+                model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option,
+                                                                                                            model_name,
+                                                                                                            _activation_function,
+                                                                                                            _optimizer,
+                                                                                                            _num_centres,
+                                                                                                            _encoding_dim_AE,
+                                                                                                            input_size)
+                scaler = self._TrainTestDataPreproc.create_scaler(X)
+                X_train_without_saler_end, y_train = self._TrainTestDataPreproc.option_preprocessing(option, X_train_without_saler, y_train)
+                X_train, X_test = self._TrainTestDataPreproc.scale_data(scaler, X_train_without_saler_end, X_test_without_saler)
+                X_train = X_train.to_numpy()
+                X_test = X_test.to_numpy()
         print(f"X_train shape: {X_train.shape}")
         print(f"y_train shape: {y_train.shape}")
         print(f"X_test shape: {X_test.shape}")

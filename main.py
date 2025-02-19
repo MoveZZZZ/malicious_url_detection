@@ -8,9 +8,9 @@ def main():
     _TrainModels = TrainModels(log_filename)
 
     _Data_Preproc = DataPreprocessing(log_filename)
-
     _Data_Preproc.select_bert_features()
-
+    #_Data_Preproc.split_dataset_into_train_and_test_files(_Data_Preproc.bert_features_selected_768_dataset)
+    #_TrainModels.train_model(911,"xgb", "relu", "adam", 30)
     # #_Data_Preproc.refractoring_and_save_features_dataset()
     # #_TrainModels.train_bert_based_model(1,"bert")
     #

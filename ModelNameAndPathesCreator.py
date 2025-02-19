@@ -5,6 +5,7 @@ from sklearn.ensemble import RandomForestClassifier
 from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
 from sklearn.neural_network import MLPClassifier
+from sklearn.linear_model import LogisticRegression
 from pytorch_tabnet.tab_model import TabNetClassifier
 from transformers import TFBertForSequenceClassification
 class ModelNameAndPathesCreator:
@@ -25,6 +26,9 @@ class ModelNameAndPathesCreator:
                 force_col_wise=True,
             )
             save_file_name = f"LGBMClassifier_{end_file_name}"
+        elif model_name == "log_reg":
+            model = LogisticRegression()
+            save_file_name = f"LogisticRegression_{end_file_name}"
         elif model_name == "xgb":
             model = XGBClassifier(eval_metric="mlogloss")
             save_file_name = f"XGBClassifier_{end_file_name}"
@@ -89,6 +93,12 @@ class ModelNameAndPathesCreator:
         file_end_map = {
             1: "full_data",
             2: "smote_oversampling",
-            3: "adasyn_oversampling"
+            3: "adasyn_oversampling",
+            91: "bert_features_full_data",
+            92: "bert_features_smote_oversampling",
+            93: "bert_features_adasyn_oversampling",
+            911: "bert_features_full_data_scaled",
+            912: "bert_features_smote_oversampling_scaled",
+            913: "bert_features_adasyn_oversampling_scaled"
         }
         return file_end_map.get(option, "UNKNOWN_OPTION")
