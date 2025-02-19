@@ -14,6 +14,7 @@ from transformers import BertTokenizer
 import torch
 
 import numpy as np
+import pandas as pd
 
 
 class TrainModels:
@@ -26,28 +27,10 @@ class TrainModels:
         self._Optimization = Optimization()
         print(tf.config.list_physical_devices('GPU'))
         print(torch.backends.cudnn.version())
-    def clear_colums(self, data):
-        _data = data.copy()
-        print(f"col before: {len(_data.columns)}")
-        _data = _data.drop(columns=["url_entropy"])
-        _data = _data.drop(columns=["suspicious_tld"])
-        _data = _data.drop(columns=["c2_tld"])
-        _data = _data.drop(columns=["shortening_service"])
-        _data = _data.drop(columns=["contains_suspicious_words"])
-        _data = _data.drop(columns=["extract_root_domain_vector"])
-        _data = _data.drop(columns=["get_url_region_vector"])
-        # print(_data.groupby("type")["extract_root_domain_vector"].agg(["min", "max"]))
-        # print(_data.groupby("type")["get_url_region_vector"].agg(["min", "max"]))
-        # _data["extract_root_domain_vector"] = np.sqrt(_data["extract_root_domain_vector"])
-        # _data["get_url_region_vector"] = np.sqrt(_data["get_url_region_vector"])
-        # print(_data.groupby("type")["extract_root_domain_vector"].agg(["min", "max"]))
-        # print(_data.groupby("type")["get_url_region_vector"].agg(["min", "max"]))
-        print(f"col after: {len(_data.columns)}")
-        return _data
 
     def data_pathes_and_model_creation(self, option, model_name, _activation_function, _optimizer, _num_centres, _encoding_dim_AE):
         if model_name == "bert2":
-            data = self._DataPreprocessing.full_train_base.copy()
+            data = self._DataPreprocessing.train_cleared_base_dataset.copy()
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
             tokenizer_model_name = "bert-base-uncased"
             tokenizer = BertTokenizer.from_pretrained(tokenizer_model_name)
@@ -55,8 +38,7 @@ class TrainModels:
             X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.prepare_data_bert_2(X, y, tokenizer)
             scaler = None
         else:
-            data = self._DataPreprocessing.full_train.copy()
-            data =  self.clear_colums(data)
+            data = self._DataPreprocessing.train_custom_fetures_seleted_cleared_and_vetorized_dataset.copy()
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
             input_size = X.shape[1]
             X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y, 0.2,42)
@@ -67,7 +49,6 @@ class TrainModels:
             X_train, X_test = self._TrainTestDataPreproc.scale_data(scaler, X_train_without_saler_end, X_test_without_saler)
             X_train = X_train.to_numpy()
             X_test = X_test.to_numpy()
-
         print(f"X_train shape: {X_train.shape}")
         print(f"y_train shape: {y_train.shape}")
         print(f"X_test shape: {X_test.shape}")

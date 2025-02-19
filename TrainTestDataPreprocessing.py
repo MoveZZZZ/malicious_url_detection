@@ -8,12 +8,11 @@ from collections import Counter
 from sklearn.feature_extraction.text import TfidfVectorizer
 from tqdm import tqdm
 import tensorflow as tf
-from scipy.sparse import hstack
 from imblearn.over_sampling import SMOTE, ADASYN
+
 class TrainTestDataPreprocessing:
     def __init__(self, log_filename):
         self.LogCreator = LogFileCreator(log_filename)
-
 
     def create_X_and_Y(self, data):
         X = data.drop(['type'], axis = 1)
@@ -52,21 +51,11 @@ class TrainTestDataPreprocessing:
         self.LogCreator.print_and_write_log(f"Tokenized shape: input_ids={tokenized_data['input_ids'].shape}, attention_mask={tokenized_data['attention_mask'].shape}")
         return tokenized_data
 
-    def extract_tfidf_features(self,urls):
-        self.LogCreator.print_and_write_log("Extracting TF-IDF features...")
-        vectorizer = TfidfVectorizer(analyzer="char", ngram_range=(2, 5))
-        features = vectorizer.fit_transform(urls)
-        self.LogCreator.print_and_write_log(f"TF-IDF shape: {features.shape}")
-        return features
-
     def prepare_data_bert_2(self, X, y, tokenizer):
         self.LogCreator.print_and_write_log("Preparing data...")
         X_tokenized = self.tokenize_urls(X["url"], tokenizer)
-        #X_features = self.extract_tfidf_features(X["url"])
         X_input_ids = X_tokenized["input_ids"].numpy()
         X_input_att = X_tokenized["attention_mask"].numpy()
-        #X_combined = hstack([X_input_ids, X_features])
-        #print(f"Final feature shape: {X_combined.shape}")
         X_train, X_test, y_train, y_test = self.split_data_for_train_and_validation_bert(X_input_ids, X_input_att, y, 0.2, 42)
         for key, value in X_train.items():
             print(f"{key} shape: {value.shape}")

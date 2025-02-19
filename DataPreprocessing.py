@@ -9,50 +9,107 @@ import whois
 import tldextract
 from urllib.parse import urlparse
 from sklearn.model_selection import StratifiedShuffleSplit
-import requests
+import numpy as np
+import torch
+from transformers import BertTokenizer, BertModel
+from tqdm import tqdm
 
 class DataPreprocessing:
     def __init__(self, log_filename):
-        # self.base_dataset_path = "D:/PWR/Praca magisterska/Dataset/dataset_mal.csv"
-        # self.features_selected_dataset_path = "D:/PWR/Praca magisterska/Dataset/data_with_features.csv"
-        # self.cleared_and_vectorized_dataset_path = "D:/PWR/Praca magisterska/Dataset/cleared_dataset_mal_url.csv"
 
-        self.base_dataset_path = "/mnt/d/PWR/Praca magisterska/Dataset/dataset_mal.csv"
-        self.features_selected_dataset_path = "/mnt/d/PWR/Praca magisterska/Dataset/data_with_features.csv"
-        self.cleared_and_vectorized_dataset_path = "/mnt/d/PWR/Praca magisterska/Dataset/cleared_dataset_mal_url.csv"
+        self.os_interp_type = "linux"
 
-        #self.cleared_full_data = "D:/PWR/Praca magisterska/Dataset/dataset_mal_clear.csv"
-        self.cleared_full_data = "/mnt/d/PWR/Praca magisterska/Dataset/dataset_mal_clear.csv"
+        #BASE DATASET
+        self.base_dataset_path = self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/BASE_DATASET/dataset_mal.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/BASE_DATASET/dataset_mal.csv"
+        )
+        #DELETED NaN or INF in LABELS/URLS + LABELING
+        self.cleared_base_dataset_path=self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/CLEARED_BASE_DATASET/dataset_mal_cleared.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/CLEARED_BASE_DATASET/dataset_mal_cleared.csv"
+        )
+        #CLEAR DATASET WITH CUSTOM_FEATURES + LABELED TYPE
+        self.custom_fetures_seleted_dataset_path = self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/CUSTOM_FEATURES/dataset_with_features.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/CUSTOM_FEATURES/dataset_with_features.csv"
+        )
+        #CLEAR DATASET WITH CUSTOM_FEATURES AND VECTORIZED CUSTOM TXT FEATURES + LABELED TYPE
+        self.custom_fetures_seleted_cleared_and_vetorized_dataset_path = self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/CUSTOM_FEATURES/CLEARED_AND_VECTORIZED/dataset_with_features_vectorized.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/CUSTOM_FEATURES/CLEARED_AND_VECTORIZED/dataset_with_features_vectorized.csv"
+        )
+        #CLEAR DATASET WITH 768 BERT FEATURES
+        self.bert_features_selected_768_dataset_path = self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/CUSTOM_FEATURES/768/dataset_with_bert_features_768.csv"
+        )
+        #TRAIN SET BASE_DATASET
+        self.train_cleared_base_dataset_path = self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/CLEARED_BASE_DATASET/dataset_mal_cleared_train.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/CLEARED_BASE_DATASET/dataset_mal_cleared_train.csv"
+        )
+        #TEST SET BASE_DATASET
+        self.test_cleared_base_dataset_path = self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/CLEARED_BASE_DATASET/dataset_mal_cleared_test.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/CLEARED_BASE_DATASET/dataset_mal_cleared_test.csv"
+        )
+        #TRAIN SET CUSTOM_FEATURES_DATASET
+        self.train_custom_fetures_seleted_cleared_and_vetorized_dataset_path = self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/CUSTOM_FEATURES/CLEARED_AND_VECTORIZED/dataset_with_features_vectorized_train.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/CUSTOM_FEATURES/CLEARED_AND_VECTORIZED/dataset_with_features_vectorized_train.csv"
+        )
+        #TEST SET CUSTOM_FEATIURES_DATASET
+        self.test_custom_fetures_seleted_cleared_and_vetorized_dataset_path = self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/CUSTOM_FEATURES/CLEARED_AND_VECTORIZED/dataset_with_features_vectorized_test.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/CUSTOM_FEATURES/CLEARED_AND_VECTORIZED/dataset_with_features_vectorized_test.csv"
+        )
 
-        # self.data_for_train_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
-        # self.data_for_test_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
-
-        self.data_for_train_model = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
-        self.data_for_test_model = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
 
 
-        # self.data_for_train_model_base = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
-        # self.data_for_test_model_base = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
+        #self.base_dataset=self.read_data(self.base_dataset_path)
+        self.cleared_base_dataset = self.read_data(self.cleared_base_dataset_path)
+        #self.custom_fetures_seleted_dataset = self.read_data(self.custom_fetures_seleted_dataset_path)
+        self.custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.custom_fetures_seleted_cleared_and_vetorized_dataset_path)
 
-        self.data_for_train_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
-        self.data_for_test_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
 
-        self.data_full = self.read_data(self.base_dataset_path)
-        #self.clear_data_full_df = self.read_data(self.cleared_full_data)
-        #self.data_features_selected = self.read_data(self.features_selected_dataset_path)
-        #self.cleared_and_vectorized_data = self.read_data(self.cleared_and_vectorized_dataset_path)
+        self.train_cleared_base_dataset = self.read_data(self.train_cleared_base_dataset_path)
+        self.test_cleared_base_dataset = self.read_data(self.test_cleared_base_dataset_path)
 
-        self.full_train = self.read_data(self.data_for_train_model)
-        self.full_test = self.read_data(self.data_for_test_model)
+        self.train_custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.train_custom_fetures_seleted_cleared_and_vetorized_dataset_path)
+        self.test_custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.test_custom_fetures_seleted_cleared_and_vetorized_dataset_path)
 
-        self.full_train_base = self.read_data(self.data_for_train_model_base)
-        self.full_test_base = self.read_data(self.data_for_test_model_base)
+
+        # # self.data_for_train_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
+        # # self.data_for_test_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
+        #
+        # self.data_for_train_model = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
+        # self.data_for_test_model = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
+        #
+        #
+        # # self.data_for_train_model_base = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
+        # # self.data_for_test_model_base = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
+        #
+        # self.data_for_train_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
+        # self.data_for_test_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
+        #
+        # self.cleared_full_data_bert_features_768 = "/mnt/d/PWR/Praca magisterska/Dataset/BERT/train_and_test_sets/full_dataset_bert_features_768.csv"
+        #
+        # self.data_full = self.read_data(self.base_dataset_path)
+        # self.clear_data_full_df = self.read_data(self.cleared_full_data)
+        # #self.data_features_selected = self.read_data(self.features_selected_dataset_path)
+        # #self.cleared_and_vectorized_data = self.read_data(self.cleared_and_vectorized_dataset_path)
+        #
+        # self.full_train = self.read_data(self.data_for_train_model)
+        # self.full_test = self.read_data(self.data_for_test_model)
+        #
+        # self.full_train_base = self.read_data(self.data_for_train_model_base)
+        # self.full_test_base = self.read_data(self.data_for_test_model_base)
 
         self.LogCreator = LogFileCreator(log_filename)
+
         self.SUSPICIOUS_WORDS = {"login", "secure", "verify", "update", "password", "PayPal", "signin", "bank", "account", "update",
                                  "free", "lucky", "service", "bonus", "ebayissapi", "webscr"}
-
-
         self.C2_TLDS = {
             ".best",
             ".cf",
@@ -213,7 +270,6 @@ class DataPreprocessing:
             ".webcam",
             ".webcam"
         }
-
         self.ccTLD_to_region = {
             ".ac": "Ascension Island",
             ".ad": "Andorra",
@@ -472,6 +528,13 @@ class DataPreprocessing:
             'malware': 3
         }
         self.N = nextprime(10**7)
+        self.tokenizer_model_name = "bert-base-uncased"
+        self.tokenizer = BertTokenizer.from_pretrained(self.tokenizer_model_name)
+        self.model = BertModel.from_pretrained(self.tokenizer_model_name, output_hidden_states=True)
+        self.model.eval()
+
+    def _select_path(self, win, lin):
+        return win if self.os_interp_type == "Windows" else lin
     def read_data(self, file_path):
         try:
             data = pd.read_csv(file_path)
@@ -480,13 +543,38 @@ class DataPreprocessing:
             print(f"Failed to read file {file_path}: {e}")
             return None
 
+    def select_bert_features(self):
+        data = self.cleared_base_dataset.copy()
+        url_list = data["url"].tolist()
+        features = self.extract_features_bert(url_list)
+        features = features.numpy()
+        types = data['type'].values()
+        num_samples, num_features = features.shape
+        dataset = np.hstack((features, types.reshape((-1, 1))))
+        columns = [f"feature_{i}" for i in range(num_features)] + ["type"]
+        df = pd.DataFrame(dataset, columns=columns)
+        df.to_csv(self.bert_features_selected_768_dataset_path, index=False)
+    def extract_features_bert(self, texts, batch_size=32):
+        all_features = []
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(device)
+        for i in tqdm(range(0, len(texts), batch_size), desc = "Processing batches"):
+            batch_texts = texts[i:i + batch_size]
+            encoded_dict = self.tokenizer.batch_encode_plus(
+                batch_texts, add_special_tokens=True, padding="longest",
+                truncation=True, max_length=128, return_tensors="pt"
+            )
+            input_ids = encoded_dict["input_ids"].to(device)
+            with torch.no_grad():
+                outputs = self.model(input_ids)
+                hidden_states = outputs.hidden_states
+            token_vecs = torch.mean(torch.stack(hidden_states[-4:]), dim=0)
+            batch_features = torch.mean(token_vecs, dim=1)
+            all_features.append(batch_features.cpu())
+        return torch.cat(all_features, dim=0)
+
     def print_dataset_info (self, data):
         print(data['type'].value_counts())
-    def print_class_count(self, data):
-        print(f"BENIGN: {(data['type'] == 'benign').sum()}")
-        print(f"DEFACEMENT: {(data['type'] != 'defacement').sum()}")
-        print(f"PHISHING: {(data['type'] != 'phishing').sum()}")
-        print(f"MALWARE: {(data['type'] != 'malware').sum()}")
     def print_first_20_row(self,data):
         print(data.head(20))
     def fast_hash_encode(self, category, salt="my_salt"):
@@ -505,55 +593,36 @@ class DataPreprocessing:
             f"{self.LogCreator.string_spit_stars}")
         self.print_dataset_info(data)
         return data
-
     def clear_empty_values_and_save_full_dataset(self):
-        df = self.data_full.copy()
+        df = self.base_dataset.copy()
         df = self.change_data_labels(df)
         valid_types = {0, 1, 2, 3}
         df = df[df['type'].isin(valid_types)]
         df.dropna()
-        df.to_csv(self.cleared_full_data, index=False)
+        df.to_csv(self.cleared_base_dataset_path, index=False)
 
-    def clear_and_vectorize_finally_dataset(self, data):
-        dataset_form_file = self.data_features_selected.copy()
-        self.LogCreator.print_and_write_log("Start of full data cleansing")
-        full_cleansing_data_time_start  = time.time()
-        df = self.change_data_labels(dataset_form_file)
+    def clear_and_vectorize_finally_dataset(self):
+        df = self.custom_fetures_seleted_dataset.copy()
         binary_features = [
             "contains_ip", "abnormal_url", "shortening_service", "c2_tld", "suspicious_tld",
             "malware_tld", "c2_malicious_tld", "phishing_tld", "sensitive_tld", "contains_suspicious_words"
         ]
         for feature in binary_features:
             df = df[df[feature].isin([0, 1])]
-
         valid_types = {0, 1, 2, 3}
         df = df[df['type'].isin(valid_types)]
         df = df[df['region'].str.match(r'^[A-Za-z]+$', na=False)]
         df_vectorized = df.copy()
         df_vectorized['extract_root_domain_vector'] = df['root_domain'].apply(self.fast_hash_encode)
         df_vectorized['get_url_region_vector'] = df['region'].apply(self.fast_hash_encode)
-
         df_vectorized.drop(columns=['root_domain', 'region', 'url'], inplace=True, axis=1)
-        full_cleansing_data_time_end = time.time()
-        self.LogCreator.print_and_write_log(
-            f"End of full data cleansing. Time to change: {self.LogCreator.count_time(full_cleansing_data_time_start, full_cleansing_data_time_end):.2f} s.\n"
-            f"{self.LogCreator.string_spit_stars}")
-        df_vectorized.to_csv(self.cleared_and_vectorized_dataset_path, index=False)
-        self.LogCreator.print_and_write_log(f"File successfully saved to: {self.cleared_and_vectorized_dataset_path}")
+        df_vectorized.to_csv(self.custom_fetures_seleted_cleared_and_vetorized_dataset_path, index=False)
 
     def refractoring_and_save_features_dataset(self):
-        self.LogCreator.print_and_write_log("Start get data features")
-        start_time_to_get_features = time.time()
-        data = self.data_full.copy()
+        data = self.cleared_base_dataset.copy()
         features_df = data["url"].apply(self.extract_features).apply(pd.Series)
         _data = pd.concat([data, features_df], axis=1)
-        end_time_to_get_features = time.time()
-        self.LogCreator.print_and_write_log(
-            f"End get data features. Time to change: {self.LogCreator.count_time(start_time_to_get_features, end_time_to_get_features):.2f} s.\n"
-            f"{self.LogCreator.string_spit_stars}")
-        print(_data["domain_age"].value_counts())
-        _data.to_csv(self.features_selected_dataset_path,index=False)
-        self.LogCreator.print_and_write_log(f"File successfully saved to: {self.features_selected_dataset_path}")
+        _data.to_csv(self.custom_fetures_seleted_dataset_path,index=False)
 
     def extract_features(self, url):
         features = {}
@@ -723,7 +792,9 @@ class DataPreprocessing:
         for train_idx, test_idx in strat_split.split(X, y):
             train_data = full_data.iloc[train_idx]
             test_data = full_data.iloc[test_idx]
-
-        train_data.to_csv(self.data_for_train_model_base, index=False)
-        test_data.to_csv(self.data_for_test_model_base, index=False)
+        self.print_dataset_info(full_data)
+        self.print_dataset_info(train_data)
+        self.print_dataset_info(test_data)
+        train_data.to_csv(self.train_custom_fetures_seleted_cleared_and_vetorized_dataset_path, index=False)
+        test_data.to_csv(self.test_custom_fetures_seleted_cleared_and_vetorized_dataset_path, index=False)
         print("Completed split datasets!")
