@@ -13,6 +13,8 @@ import numpy as np
 import torch
 from transformers import BertTokenizer, BertModel
 from tqdm import tqdm
+from sklearn.decomposition import PCA
+
 
 class DataPreprocessing:
     def __init__(self, log_filename):
@@ -72,46 +74,30 @@ class DataPreprocessing:
             win="D:/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768_test.csv",
             lin="/mnt/d/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768_test.csv"
         )
-
+        self.train_bert_PCA_features_selected_350_dataset_path = self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/BERT_FEATURES/350/dataset_with_bert_features_350_train.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/BERT_FEATURES/350/dataset_with_bert_features_350_train.csv"
+        )
+        self.test_bert_PCA_features_selected_350_dataset_path = self._select_path(
+            win="D:/PWR/Praca magisterska/Datasets/BERT_FEATURES/350/dataset_with_bert_features_350_test.csv",
+            lin="/mnt/d/PWR/Praca magisterska/Datasets/BERT_FEATURES/350/dataset_with_bert_features_350_test.csv"
+        )
         #self.base_dataset=self.read_data(self.base_dataset_path)
-        self.cleared_base_dataset = self.read_data(self.cleared_base_dataset_path)
+        #self.cleared_base_dataset = self.read_data(self.cleared_base_dataset_path)
         #self.custom_fetures_seleted_dataset = self.read_data(self.custom_fetures_seleted_dataset_path)
-        self.custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.custom_fetures_seleted_cleared_and_vetorized_dataset_path)
-        self.bert_features_selected_768_dataset = self.read_data(self.bert_features_selected_768_dataset_path)
+        #self.custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.custom_fetures_seleted_cleared_and_vetorized_dataset_path)
+        #self.bert_features_selected_768_dataset = self.read_data(self.bert_features_selected_768_dataset_path)
 
 
-        self.train_cleared_base_dataset = self.read_data(self.train_cleared_base_dataset_path)
-        self.test_cleared_base_dataset = self.read_data(self.test_cleared_base_dataset_path)
+        #self.train_cleared_base_dataset = self.read_data(self.train_cleared_base_dataset_path)
+        #self.test_cleared_base_dataset = self.read_data(self.test_cleared_base_dataset_path)
 
-        self.train_custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.train_custom_fetures_seleted_cleared_and_vetorized_dataset_path)
-        self.test_custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.test_custom_fetures_seleted_cleared_and_vetorized_dataset_path)
+        #self.train_custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.train_custom_fetures_seleted_cleared_and_vetorized_dataset_path)
+        #self.test_custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.test_custom_fetures_seleted_cleared_and_vetorized_dataset_path)
 
+        #self.train_bert_features_selected_768_dataset = self.read_data(self.train_bert_features_selected_768_dataset_path)
+        #self.test_bert_features_selected_768_dataset = self.read_data(self.test_bert_features_selected_768_dataset_path)
 
-        # # self.data_for_train_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
-        # # self.data_for_test_model = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
-        #
-        # self.data_for_train_model = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset.csv"
-        # self.data_for_test_model = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset.csv"
-        #
-        #
-        # # self.data_for_train_model_base = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
-        # # self.data_for_test_model_base = "D:/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
-        #
-        # self.data_for_train_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/train_dataset_base.csv"
-        # self.data_for_test_model_base = "/mnt/d/PWR/Praca magisterska/Dataset/train_and_test_sets/test_dataset_base.csv"
-        #
-        # self.cleared_full_data_bert_features_768 = "/mnt/d/PWR/Praca magisterska/Dataset/BERT/train_and_test_sets/full_dataset_bert_features_768.csv"
-        #
-        # self.data_full = self.read_data(self.base_dataset_path)
-        # self.clear_data_full_df = self.read_data(self.cleared_full_data)
-        # #self.data_features_selected = self.read_data(self.features_selected_dataset_path)
-        # #self.cleared_and_vectorized_data = self.read_data(self.cleared_and_vectorized_dataset_path)
-        #
-        # self.full_train = self.read_data(self.data_for_train_model)
-        # self.full_test = self.read_data(self.data_for_test_model)
-        #
-        # self.full_train_base = self.read_data(self.data_for_train_model_base)
-        # self.full_test_base = self.read_data(self.data_for_test_model_base)
 
         self.LogCreator = LogFileCreator(log_filename)
 
@@ -580,6 +566,26 @@ class DataPreprocessing:
             all_features.append(batch_features.cpu())
         return torch.cat(all_features, dim=0)
 
+    def select_bert_features_with_PCA (self):
+        n_components = 350
+        df = self.test_bert_features_selected_768_dataset
+        labels = df["type"].values
+        features = df.drop(columns=["type"]).values
+
+        print(f"Data downloaded! Size: {features.shape}")
+
+
+        pca = PCA(n_components=n_components)
+        features_pca = pca.fit_transform(features)
+
+        print("PCA is complete! New dimensionality:", features_pca.shape)
+
+        columns = [f"feature_{i}" for i in range(n_components)] + ["type"]
+        df_pca = pd.DataFrame(np.hstack((features_pca, labels.reshape(-1, 1))), columns=columns)
+
+        df_pca.to_csv(self.test_bert_PCA_features_selected_350_dataset_path, index=False)
+
+
     def print_dataset_info (self, data):
         print(data['type'].value_counts())
     def print_first_20_row(self,data):
@@ -806,3 +812,36 @@ class DataPreprocessing:
         train_data.to_csv(self.train_bert_features_selected_768_dataset_path, index=False)
         test_data.to_csv(self.test_bert_features_selected_768_dataset_path, index=False)
         print("Completed split datasets!")
+
+    def split_large_csv_into_train_and_test(self, chunk_size=10000, test_size=0.1):
+
+        label_column = 'type'
+
+        train_data_list = []
+        test_data_list = []
+
+        with pd.read_csv(self.bert_features_selected_768_dataset_path, chunksize=chunk_size) as reader:
+            for i, chunk in enumerate(tqdm(reader, desc="Chunk processing: ", unit=" chunk")):
+                if chunk[label_column].nunique() < 2:
+                    print("There is not enough data in this chunk for stratified partitioning!")
+                    continue
+
+                X = chunk.drop(columns=[label_column])
+                y = chunk[label_column]
+                strat_split = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=42)
+                for train_idx, test_idx in strat_split.split(X, y):
+                    train_data_list.append(chunk.iloc[train_idx])
+                    test_data_list.append(chunk.iloc[test_idx])
+
+        train_data = pd.concat(train_data_list, ignore_index=True)
+        test_data = pd.concat(test_data_list, ignore_index=True)
+
+        print("Fin size:")
+        print(f"Train: {train_data.shape}, Test: {test_data.shape}")
+        print(train_data[label_column].value_counts())
+        print(test_data[label_column].value_counts())
+
+        train_data.to_csv(self.train_bert_features_selected_768_dataset_path, index=False)
+        test_data.to_csv(self.test_bert_features_selected_768_dataset_path, index=False)
+
+        print(f" Completed split datasets!")

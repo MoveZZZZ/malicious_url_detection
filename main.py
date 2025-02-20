@@ -12,17 +12,18 @@ def main():
     #     93: "bert_features_adasyn",
     #     911: "bert_features_full_data_with_minmax_scaler",
     #     912: "bert_features_smote_with_minmax_scaler",
-    #     913: "bert_features_smote_with_minmax_scaler"
+    #     913: "bert_features_adasyn_with_minmax_scaler"
     # )
     #option, model_name, _activation_function, _optimizer, _epochs = 1, _num_centres=10
     log_filename = "AE_test_relu_selu_adam_sgd"
     _TrainModels = TrainModels(log_filename)
 
-    _Data_Preproc = DataPreprocessing(log_filename)
-    _Data_Preproc.select_bert_features()
-    #_Data_Preproc.split_dataset_into_train_and_test_files(_Data_Preproc.bert_features_selected_768_dataset)
-    #_TrainModels.train_model(911,"xgb", "relu", "adam", 30)
-    # #_Data_Preproc.refractoring_and_save_features_dataset()
+    #_Data_Preproc = DataPreprocessing(log_filename)
+    #_Data_Preproc.select_bert_features()
+    #_Data_Preproc.split_large_csv_into_train_and_test()
+    #_TrainModels.train_model(912,"xgb", "relu", "adam", 30)
+    _TrainModels.train_model(911, "deep_mlp_5", 'relu', 'adam', 30, 400, 8, "512-128_stable_bert_350")
+    #_Data_Preproc.select_bert_features_with_PCA()
     # #_TrainModels.train_bert_based_model(1,"bert")
     #
     # _TrainModels.train_model(99, "deep_mlp_3", 'relu', 'adam',30, 400, 10, "512-128_cleared_2")

@@ -33,7 +33,7 @@ class TrainModels:
             scaler = None
         else:
             if option == 91 or option == 92 or option == 93:
-                data = self._DataPreprocessing.bert_features_selected_768_dataset.copy()
+                data = self._DataPreprocessing.read_data(self._DataPreprocessing.train_bert_PCA_features_selected_350_dataset_path)
                 X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
                 input_size = X.shape[1]
                 X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y, 0.2,42)
@@ -43,7 +43,7 @@ class TrainModels:
                 X_test = X_test.to_numpy()
                 scaler = None
             elif option == 911 or option == 912 or option == 913:
-                data = self._DataPreprocessing.bert_features_selected_768_dataset.copy()
+                data = self._DataPreprocessing.read_data(self._DataPreprocessing.train_bert_PCA_features_selected_350_dataset_path)
                 X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
                 input_size = X.shape[1]
                 X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(
@@ -245,7 +245,7 @@ class TrainModels:
 
     def check_test_data_custom(self, model, scaler, save_filename):
 
-        data = self._DataPreprocessing.full_test.copy()
+        data = self._DataPreprocessing.read_data(self._DataPreprocessing.test_bert_PCA_features_selected_350_dataset_path)
         X, y_test = self._TrainTestDataPreproc.create_X_and_Y(data)
         X_test_scaled, _ = self._TrainTestDataPreproc.scale_data(scaler, X)
 
