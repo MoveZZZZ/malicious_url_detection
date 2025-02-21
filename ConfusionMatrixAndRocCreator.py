@@ -196,7 +196,7 @@ class CM_and_ROC_creator:
             plt.subplot(2, 2, 2)
             plt.plot(epochs, train_acc, 'r', label='Training accuracy')
             plt.plot(epochs, val_acc, 'b', label='Validation accuracy')
-            plt.title('Training and Validation Accuracy')
+            plt.title(f'Training and Validation Accuracy for {model_name}')
             plt.xlabel('Epochs')
             plt.ylabel('Accuracy')
             plt.legend()

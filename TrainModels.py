@@ -1,3 +1,5 @@
+import numpy as np
+
 from LogSystem import LogFileCreator
 from DataPreprocessing import DataPreprocessing
 from TrainTestDataPreprocessing import TrainTestDataPreprocessing
@@ -10,9 +12,10 @@ import tensorflow as tf
 from CustomModels import Optimization
 from transformers import BertTokenizer
 import torch
+from sklearn.metrics import accuracy_score, classification_report
 
 class TrainModels:
-    def __init__(self, log_filename):
+    def __init__(self, log_filename, _data_option):
         self.LogCreator = LogFileCreator(log_filename)
         self._DataPreprocessing = DataPreprocessing(log_filename)
         self._TrainTestDataPreproc = TrainTestDataPreprocessing(log_filename)
@@ -21,10 +24,34 @@ class TrainModels:
         self._Optimization = Optimization()
         print(tf.config.list_physical_devices('GPU'))
         print(torch.backends.cudnn.version())
+        self.data_option = _data_option
+
+    def choise_train_dataset_option(self):
+        self.LogCreator.print_and_write_log(f"Start load train data: {self.data_option}")
+        if self.data_option == "custom_features":
+            return self._DataPreprocessing.read_data(self._DataPreprocessing.train_custom_fetures_seleted_cleared_and_vetorized_dataset_path)
+        elif self.data_option == "bert_768":
+            return self._DataPreprocessing.read_data(self._DataPreprocessing.train_bert_features_selected_768_dataset_path)
+        elif self.data_option == "bert_350":
+            return self._DataPreprocessing.read_data(self._DataPreprocessing.train_bert_PCA_features_selected_350_dataset_path)
+        else:
+            print("Bad option!")
+            return 0
+    def choise_test_dataset_option(self):
+        self.LogCreator.print_and_write_log(f"Start load test data: {self.data_option}")
+        if self.data_option == "custom_features":
+            return self._DataPreprocessing.read_data(self._DataPreprocessing.test_custom_fetures_seleted_cleared_and_vetorized_dataset_path)
+        elif self.data_option == "bert_768":
+            return self._DataPreprocessing.read_data(self._DataPreprocessing.test_bert_features_selected_768_dataset_path)
+        elif self.data_option == "bert_350":
+            return self._DataPreprocessing.read_data(self._DataPreprocessing.test_bert_PCA_features_selected_350_dataset_path)
+        else:
+            print("Bad option!")
+            return 0
 
     def data_pathes_and_model_creation(self, option, model_name, _activation_function, _optimizer, _num_centres, _encoding_dim_AE):
         if model_name == "bert2":
-            data = self._DataPreprocessing.train_cleared_base_dataset.copy()
+            data = self._DataPreprocessing.read_data(self._DataPreprocessing.train_cleared_base_dataset_path)
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
             tokenizer_model_name = "bert-base-uncased"
             tokenizer = BertTokenizer.from_pretrained(tokenizer_model_name)
@@ -32,18 +59,19 @@ class TrainModels:
             X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.prepare_data_bert_2(X, y, tokenizer)
             scaler = None
         else:
-            if option == 91 or option == 92 or option == 93:
-                data = self._DataPreprocessing.read_data(self._DataPreprocessing.train_bert_PCA_features_selected_350_dataset_path)
+            if option in [91,92,93]:
+                data = self.choise_train_dataset_option()
                 X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
                 input_size = X.shape[1]
                 X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y, 0.2,42)
                 model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer,
                                                                                                         _num_centres ,_encoding_dim_AE,input_size)
+                X_train, y_train = self._TrainTestDataPreproc.option_preprocessing(option, X_train, y_train)
                 X_train = X_train.to_numpy()
                 X_test = X_test.to_numpy()
                 scaler = None
-            elif option == 911 or option == 912 or option == 913:
-                data = self._DataPreprocessing.read_data(self._DataPreprocessing.train_bert_PCA_features_selected_350_dataset_path)
+            elif option in [911,912,913]:
+                data = self.choise_train_dataset_option()
                 X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
                 input_size = X.shape[1]
                 X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(
@@ -66,7 +94,7 @@ class TrainModels:
                 X_train = X_train.to_numpy()
                 X_test = X_test.to_numpy()
             else:
-                data = self._DataPreprocessing.train_custom_fetures_seleted_cleared_and_vetorized_dataset.copy()
+                data = self.choise_train_dataset_option()
                 X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
                 input_size = X.shape[1]
                 X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y,
@@ -84,10 +112,6 @@ class TrainModels:
                 X_train, X_test = self._TrainTestDataPreproc.scale_data(scaler, X_train_without_saler_end, X_test_without_saler)
                 X_train = X_train.to_numpy()
                 X_test = X_test.to_numpy()
-        print(f"X_train shape: {X_train.shape}")
-        print(f"y_train shape: {y_train.shape}")
-        print(f"X_test shape: {X_test.shape}")
-        print(f"y_test shape: {X_test.shape}")
         return model, save_file_name, X_train, X_test, y_train, y_test, scaler
 
     def print_model_summary(self, model):
@@ -122,8 +146,19 @@ class TrainModels:
         #     print(model.summary())
         # else:
         #     print(model.model.summary())
-    def train_model(self, option, model_name, _activation_function, _optimizer, _epochs = 1, _num_centres_RBFL=10, _encoding_dim_AE = 10, _model_params_string=""):
-        txt = ""
+    def choise_loss(self, _loss, weights):
+        loss_mapping = {
+            "categorical_crossentropy": "categorical_crossentropy",
+            "focal_loss": self._Optimization.focal_loss(),
+            "weighted_categorical_crossentropy": self._Optimization.weighted_categorical_crossentropy(weights)
+        }
+        if _loss not in loss_mapping:
+            print(
+                f"Error: Loss function {_loss} not found! Available: {list(loss_mapping.keys())}")
+            return ""
+        return loss_mapping[_loss]
+    def train_model(self, option, model_name, _activation_function="", _optimizer="", _loss="", _epochs = 1, _num_centres_RBFL=10, _encoding_dim_AE = 10, _model_params_string=""):
+        txt = "No more config information"
         if model_name == "AE":
             txt = f"dim_AE = {_encoding_dim_AE}"
         elif model_name == "RBFL":
@@ -132,29 +167,27 @@ class TrainModels:
         self.LogCreator.print_and_write_log(f"Train {model_name} with using {self._ModelNameAndPathesCreator.define_type_of_option(option)}\n"
                                             f"Activation_function: {_activation_function}\n"
                                             f"Optimizer: {_optimizer}\n"
+                                            f"Loss: {_loss}\n"
                                             f"{txt}\n"
                                             f"{self.LogCreator.string_spit_tilds}")
 
         model, save_file_name, X_train, X_test, y_train, y_test, scaler = self.data_pathes_and_model_creation(option, model_name,
                                                                                                               _activation_function, _optimizer,
                                                                                                               _num_centres_RBFL, _encoding_dim_AE)
-        save_file_name = save_file_name + f"_{_model_params_string}"
+        save_file_name = save_file_name +f"_{_loss}"+f"_{_model_params_string}"
         self.LogCreator.print_and_write_log(f"Start learn model {model_name}")
         model_train_time_start = time.time()
         class_weights = self._TrainTestDataPreproc.compute_class_weights(y_train)
+        loss_end = self.choise_loss(_loss, class_weights)
         if isinstance(model, models.Model) and model_name !="AE":
             if y_train.ndim == 1:
                 y_train = to_categorical(y_train, num_classes=4)
                 y_test = to_categorical(y_test, num_classes=4)
             early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3, restore_best_weights=True)
-            #'categorical_crossentropy' | self._Optimization.focal_loss() | self._Optimization.weighted_categorical_crossentropy(class_weights)
-            print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
-            print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
-            model.compile(optimizer=_optimizer, loss = 'categorical_crossentropy', metrics = ['accuracy'])
+            model.compile(optimizer=_optimizer, loss = loss_end, metrics = ['accuracy'])
             #self.print_model_summary(model)
             history = model.fit(X_train, y_train, epochs=_epochs, batch_size=32, validation_data=(X_test, y_test),
                       verbose=1, callbacks=[early_stopping])
-
             trained_epochs = len(history.epoch)
             best_epoch = early_stopping.stopped_epoch if early_stopping.stopped_epoch > 0 else trained_epochs
             self.LogCreator.print_and_write_log(
@@ -164,11 +197,10 @@ class TrainModels:
                 f"Best Epoch (EarlyStopping): {best_epoch if early_stopping.stopped_epoch > 0 else 'No EarlyStopping'}\n"
                 f"{self.LogCreator.string_spit_stars}"
             )
-
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)
-            self.check_test_data_custom(model, scaler, save_file_name)
+            self.check_test_data(option, model, scaler, save_file_name)
         elif model_name == "tabnet":
             y_train = y_train.to_numpy()
             y_test = y_test.to_numpy()
@@ -202,7 +234,7 @@ class TrainModels:
                 optimizer=_optimizer,
                 loss={
                     "decoder": "mse",
-                    "classifier": 'categorical_crossentropy'
+                    "classifier": loss_end
                 },
                 metrics={"classifier": ["accuracy"]}
             )
@@ -225,16 +257,17 @@ class TrainModels:
                 f"Best Epoch (EarlyStopping): {best_epoch if early_stopping.stopped_epoch > 0 else 'No EarlyStopping'}\n"
                 f"{self.LogCreator.string_spit_stars}"
             )
-
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)
+            self.check_test_data(option, model, scaler, save_file_name)
         else:
             y_train = y_train.to_numpy()
             y_test = y_test.to_numpy()
             model.fit(X_train, y_train)
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
+            self.check_test_data(option,model, scaler, save_file_name)
 
         model_train_time_end = time.time()
         self.LogCreator.print_and_write_log(
@@ -242,20 +275,23 @@ class TrainModels:
             f"{self.LogCreator.string_spit_stars}")
 
 
-
-    def check_test_data_custom(self, model, scaler, save_filename):
-
-        data = self._DataPreprocessing.read_data(self._DataPreprocessing.test_bert_PCA_features_selected_350_dataset_path)
+    def check_test_data(self, option, model, scaler, save_filename):
+        data = self.choise_test_dataset_option()
         X, y_test = self._TrainTestDataPreproc.create_X_and_Y(data)
-        X_test_scaled, _ = self._TrainTestDataPreproc.scale_data(scaler, X)
-
-        if y_test.ndim == 1 or y_test.shape[1] == 1:
-            y_test = to_categorical(y_test, num_classes=4)
-        score = model.evaluate(X_test_scaled, y_test, verbose=0)
-
-        print('Test loss:', score[0])
-        print('Test accuracy:', score[1])
+        if option in [91,92,93]:
+            X_test_scaled = X
+        else:
+            X_test_scaled, _ = self._TrainTestDataPreproc.scale_data(scaler, X)
+        if len(y_test.shape) > 1 and y_test.shape[1] > 1:
+            y_test = np.argmax(y_test, axis=1)
+        if type(model).__name__ in ['RandomForestClassifier', 'LogisticRegression',
+                                    'XGBClassifier', 'MLPClassifier']:
+            y_test = np.array(y_test)
         self.CM_and_ROC_creator.create_confusion_matrix(model, X_test_scaled, y_test, save_filename+"_test_data")
+        self.CM_and_ROC_creator.create_ROC(model, X_test_scaled, y_test, save_filename+"_test_data")
+
+
+
 
 
 

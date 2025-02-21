@@ -14,38 +14,33 @@ def main():
     #     912: "bert_features_smote_with_minmax_scaler",
     #     913: "bert_features_adasyn_with_minmax_scaler"
     # )
-    #option, model_name, _activation_function, _optimizer, _epochs = 1, _num_centres=10
-    log_filename = "AE_test_relu_selu_adam_sgd"
-    _TrainModels = TrainModels(log_filename)
+    # loss = (
+    #     "categorical_crossentropy",
+    #     "focal_loss",
+    #     "weighted_categorical_crossentropy"
+    # )
+    # dataset = (
+    #     "custom_features" -> dataset with custom selected features
+    #     "bert_768" -> dataset fith 768 selected bert features
+    #     "bert_350" -> dataset fith 350 selected bert+PCA features
+    # )
+    #option, model_name, _activation_function, _optimizer, _loss, _epochs , _num_centres_RBFL, _encoding_dim_AE, _model_params_string=""
 
-    #_Data_Preproc = DataPreprocessing(log_filename)
-    #_Data_Preproc.select_bert_features()
-    #_Data_Preproc.split_large_csv_into_train_and_test()
-    #_TrainModels.train_model(912,"xgb", "relu", "adam", 30)
-    _TrainModels.train_model(911, "deep_mlp_5", 'relu', 'adam', 30, 400, 8, "512-128_stable_bert_350")
-    #_Data_Preproc.select_bert_features_with_PCA()
-    # #_TrainModels.train_bert_based_model(1,"bert")
-    #
-    # _TrainModels.train_model(99, "deep_mlp_3", 'relu', 'adam',30, 400, 10, "512-128_cleared_2")
-    #
-    # # _TrainModels.train_model(2, "deep_mlp_3", 'relu', 'adam',30, 400, 10, "512-128")
-    # # _TrainModels.train_model(3, "deep_mlp_3", 'relu', 'adam',30, 400, 10, "512-128")
-    # #
-    # #
-    # # _TrainModels.train_model(1, "deep_mlp_3", 'selu', 'adam',30, 400, 10, "512-128")
-    # # _TrainModels.train_model(2, "deep_mlp_3", 'selu', 'adam',30, 400, 10, "512-128")
-    # # _TrainModels.train_model(3, "deep_mlp_3", 'selu', 'adam',30, 400, 10, "512-128")
-    # #
-    # # _TrainModels.train_model(1, "deep_mlp_3", 'relu', 'SGD',30, 400, 10, "512-128")
-    # # _TrainModels.train_model(2, "deep_mlp_3", 'relu', 'SGD',30, 400, 10, "512-128")
-    # # _TrainModels.train_model(3, "deep_mlp_3", 'relu', 'SGD',30, 400, 10, "512-128")
-    # #
-    # #
-    # # _TrainModels.train_model(1, "deep_mlp_3", 'selu', 'SGD',30, 400, 10, "512-128")
-    # # _TrainModels.train_model(2, "deep_mlp_3", 'selu', 'SGD',30, 400, 10, "512-128")
-    # # _TrainModels.train_model(3, "deep_mlp_3", 'selu', 'SGD',30, 400, 10, "512-128")
-    #
-    # #_TrainModels.train_model(1, "deep_mlp_5", 'sigmoid', 'adam',2, 400, 18)
+    dataset = "bert_350"
+    log_filename = "ML_models_bert_350"
+    loss = "weighted_categorical_crossentropy"
+
+    _TrainModels = TrainModels(log_filename, dataset)
+    _TrainModels.train_model(91, "RFC","", "","", 1, 1, 1, "bert_350")
+    _TrainModels.train_model(911, "RFC","", "","", 1, 1, 1, "bert_350")
+
+    _TrainModels.train_model(91, "lgbm","", "","", 1, 1, 1, "bert_350")
+    _TrainModels.train_model(911, "lgbm","", "","", 1, 1, 1, "bert_350")
+
+    _TrainModels.train_model(91, "xgb","", "","", 1, 1, 1, "bert_350")
+    _TrainModels.train_model(911, "xgb","", "","", 1, 1, 1, "bert_350")
+
+
 
 
 
