@@ -26,13 +26,16 @@ def main():
     # )
     #option, model_name, _activation_function, _optimizer, _loss, _epochs , _num_centres_RBFL, _encoding_dim_AE, _model_params_string=""
 
-    dataset = "bert_768"
+    dataset = "bert_768_browser"
     log_filename = "test"
     loss = "weighted_categorical_crossentropy"
 
-    _TrainModels = TrainModels(log_filename, dataset)
     _dp = DataPreprocessing(log_filename)
     _dp.select_bert_features()
+
+    # _TrainModels = TrainModels(log_filename, dataset)
+    # _TrainModels.train_model(911,"AE","relu", "adamw","categorical_crossentropy",30,
+    #                          1,8,"")
 
     #_dp.split_large_csv_into_train_and_test()
 

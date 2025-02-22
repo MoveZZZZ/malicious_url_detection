@@ -37,6 +37,8 @@ class TrainModels:
             return self._DataPreprocessing.read_data(self._DataPreprocessing.train_bert_PCA_features_selected_350_dataset_path)
         elif self.data_option == "bert_768_browser":
             return self._DataPreprocessing.read_data(self._DataPreprocessing.train_bert_features_selected_768_selenium_and_more_rare_class_dataset_path)
+        elif self.data_option == "bert_768_browser_np":
+            return self._DataPreprocessing.read_data(self._DataPreprocessing.train_bert_features_selected_768_selenium_and_more_rare_class_dataset_path_NEW_PHISH)
         else:
             print("Bad option!")
             return 0
@@ -50,6 +52,8 @@ class TrainModels:
             return self._DataPreprocessing.read_data(self._DataPreprocessing.test_bert_PCA_features_selected_350_dataset_path)
         elif self.data_option == "bert_768_browser":
             return self._DataPreprocessing.read_data(self._DataPreprocessing.test_bert_features_selected_768_selenium_and_more_rare_class_dataset_path)
+        elif self.data_option == "bert_768_browser_np":
+            return self._DataPreprocessing.read_data(self._DataPreprocessing.test_bert_features_selected_768_selenium_and_more_rare_class_dataset_path_NEW_PHISH)
         else:
             print("Bad option!")
             return 0
@@ -58,15 +62,17 @@ class TrainModels:
         if model_name == "bert2":
             data = self._DataPreprocessing.read_data(self._DataPreprocessing.train_cleared_base_dataset_path)
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
+            del data
             tokenizer_model_name = "bert-base-uncased"
             tokenizer = BertTokenizer.from_pretrained(tokenizer_model_name)
             model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer)
             X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.prepare_data_bert_2(X, y, tokenizer)
             scaler = None
         else:
-            if option in [91,92,93]:
+            if option in [91,92,93,94,95]:
                 data = self.choise_train_dataset_option()
                 X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
+                del data
                 input_size = X.shape[1]
                 X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y, 0.2,42)
                 model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer,
@@ -75,9 +81,10 @@ class TrainModels:
                 X_train = X_train.to_numpy()
                 X_test = X_test.to_numpy()
                 scaler = None
-            elif option in [911,912,913]:
+            elif option in [911,912,913,914,915]:
                 data = self.choise_train_dataset_option()
                 X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
+                del data
                 input_size = X.shape[1]
                 X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(
                     X, y,
@@ -91,7 +98,7 @@ class TrainModels:
                                                                                                             _encoding_dim_AE,
                                                                                                             input_size)
                 scaler = self._TrainTestDataPreproc.create_scaler(X)
-                #joblib.dump(scaler, f"/mnt/d/PWR/Praca magisterska/models/minmax_scaler_bert_768.pkl")
+                joblib.dump(scaler, f"/mnt/d/PWR/Praca magisterska/models/minmax_scaler_bert_768.pkl")
                 X_train_without_saler_end, y_train = self._TrainTestDataPreproc.option_preprocessing(option,
                                                                                                      X_train_without_saler,
                                                                                                      y_train)
@@ -102,6 +109,7 @@ class TrainModels:
             else:
                 data = self.choise_train_dataset_option()
                 X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
+                del data
                 input_size = X.shape[1]
                 X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y,
                                                                                                                   0.2,
@@ -118,7 +126,7 @@ class TrainModels:
                 X_train, X_test = self._TrainTestDataPreproc.scale_data(scaler, X_train_without_saler_end, X_test_without_saler)
                 X_train = X_train.to_numpy()
                 X_test = X_test.to_numpy()
-        return model, save_file_name, X_train, X_test, y_train, y_test, scaler
+        return model, save_file_name+f"_{self.data_option}", X_train, X_test, y_train, y_test, scaler
 
     def print_model_summary(self, model):
         print(f"Optimizer: {model.optimizer.__class__.__name__}")
@@ -147,11 +155,10 @@ class TrainModels:
                     print(f"   Kernel initializer: {layer.kernel_initializer.__class__.__name__}")
                 if hasattr(layer, 'units'):
                     print(f"   Units: {layer.units}")
-
-        # if(model.name == "autoencoder_classifier"):
-        #     print(model.summary())
-        # else:
-        #     print(model.model.summary())
+        if(model.name == "autoencoder_classifier"):
+            print(model.summary())
+        else:
+            print(model.model.summary())
     def choise_loss(self, _loss, weights):
         loss_mapping = {
             "categorical_crossentropy": "categorical_crossentropy",

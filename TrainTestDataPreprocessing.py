@@ -9,6 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from tqdm import tqdm
 import tensorflow as tf
 from imblearn.over_sampling import SMOTE, ADASYN
+from imblearn.combine import SMOTETomek, SMOTEENN
 
 class TrainTestDataPreprocessing:
     def __init__(self, log_filename):
@@ -124,10 +125,14 @@ class TrainTestDataPreprocessing:
         return X_train_scaled, X_test_scaled
 
     def option_preprocessing(self, option, X, y):
-        if option == 2 or option == 92 or option == 912:
+        if option in [2, 92, 912]:
             X_resampled, y_resampled = self.smote_oversampling(X,y)
-        elif option == 3 or option == 93 or option == 913:
+        elif option in [3, 93, 913]:
             X_resampled, y_resampled = self.adasyn_oversampling(X,y)
+        elif option in [4, 94, 914]:
+            X_resampled, y_resampled = self.smote_tomek(X,y)
+        elif option in [5, 95, 915]:
+            X_resampled, y_resampled = self.smote_enn(X,y)
         else:
             X_resampled = X
             y_resampled = y
@@ -176,4 +181,29 @@ class TrainTestDataPreprocessing:
             f"{self.LogCreator.string_spit_stars}"
         )
 
+        return X_resampled, y_resampled
+
+    def smote_tomek(self,X, y, sampling_strategy='auto', random_state=42):
+        self.LogCreator.print_and_write_log(f"Start SMOTE_TOMEK \n"
+                                            f"Data before SMOTE_TOMEK: {pd.Series(y).value_counts()}")
+        smote_tomek_start = time.time()
+        smote_tomek = SMOTETomek(sampling_strategy=sampling_strategy, random_state=random_state)
+        X_resampled, y_resampled = smote_tomek.fit_resample(X, y)
+        smote_tomek_end = time.time()
+        self.LogCreator.print_and_write_log(f"End SMOTE_TOMEK \n"
+                                            f"Data after SMOTE_TOMEK: {pd.Series(y_resampled).value_counts()}\n"
+                                            f"Time to SMOTE_TOMEK: {self.LogCreator.count_time(smote_tomek_start, smote_tomek_end):.2f} s.\n"
+                                            f"{self.LogCreator.string_spit_stars}")
+        return X_resampled, y_resampled
+    def smote_enn(self,X, y, sampling_strategy='auto', random_state=42):
+        self.LogCreator.print_and_write_log(f"Start SMOTE_ENN \n"
+                                            f"Data before SMOTE_ENN: {pd.Series(y).value_counts()}")
+        smote_enn_start = time.time()
+        smote_enn = SMOTEENN(sampling_strategy=sampling_strategy, random_state=random_state)
+        X_resampled, y_resampled = smote_enn.fit_resample(X, y)
+        smote_enn_end = time.time()
+        self.LogCreator.print_and_write_log(f"End SMOTE_ENN \n"
+                                            f"Data after SMOTE_ENN: {pd.Series(y_resampled).value_counts()}\n"
+                                            f"Time to SMOTE_ENN: {self.LogCreator.count_time(smote_enn_start, smote_enn_end):.2f} s.\n"
+                                            f"{self.LogCreator.string_spit_stars}")
         return X_resampled, y_resampled

@@ -94,11 +94,17 @@ class ModelNameAndPathesCreator:
             1: "full_data",
             2: "smote_oversampling",
             3: "adasyn_oversampling",
+            4: "smote_tomek",
+            5: "smote_enn",
             91: "bert_features_full_data",
             92: "bert_features_smote_oversampling",
             93: "bert_features_adasyn_oversampling",
+            94: "bert_features_smote_tomek",
+            95: "bert_features_smote_enn",
             911: "bert_features_full_data_scaled",
             912: "bert_features_smote_oversampling_scaled",
-            913: "bert_features_adasyn_oversampling_scaled"
+            913: "bert_features_adasyn_oversampling_scaled",
+            914: "bert_features_smote_tomek_scaled",
+            915: "bert_features_smote_enn_scaled"
         }
         return file_end_map.get(option, "UNKNOWN_OPTION")

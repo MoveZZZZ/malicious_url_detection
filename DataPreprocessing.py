@@ -105,6 +105,42 @@ class DataPreprocessing:
             win="D:/PWR/Praca magisterska/Datasets/BERT_FEATURES/350/dataset_with_bert_features_350_test.csv",
             lin="/mnt/d/PWR/Praca magisterska/Datasets/BERT_FEATURES/350/dataset_with_bert_features_350_test.csv"
         )
+
+
+
+
+
+
+
+
+
+
+
+
+
+        self.cleared_base_dataset_selenium_and_more_rare_class_path_NEW_PHISH=self._select_path(
+            win="/mnt/f/data/dataset_mal_cleared_full_np.csv",
+            lin="/mnt/f/data/dataset_mal_cleared_full_np.csv"
+        )
+
+        self.bert_features_selected_768_selenium_and_more_rare_class_path_NEW_PHISH = self._select_path(
+            win="/mnt/f/data/dataset_with_bert_browser_features_768_np.csv",
+            lin="/mnt/f/data/dataset_with_bert_browser_features_768_np.csv"
+        )
+
+        self.train_bert_features_selected_768_selenium_and_more_rare_class_dataset_path_NEW_PHISH = self._select_path(
+            win="/mnt/f/data/dataset_with_bert_features_768_browser_train_np.csv",
+            lin="/mnt/f/data/dataset_with_bert_features_768_browser_train_np.csv"
+        )
+        self.test_bert_features_selected_768_selenium_and_more_rare_class_dataset_path_NEW_PHISH = self._select_path(
+            win="/mnt/f/data/dataset_with_bert_features_768_browser_test_np.csv",
+            lin="/mnt/f/data/dataset_with_bert_features_768_browser_np_test.csv"
+        )
+
+
+
+
+
         #self.base_dataset=self.read_data(self.base_dataset_path)
         #self.cleared_base_dataset = self.read_data(self.cleared_base_dataset_path)
         #self.custom_fetures_seleted_dataset = self.read_data(self.custom_fetures_seleted_dataset_path)
@@ -560,7 +596,7 @@ class DataPreprocessing:
             return None
 
     def select_bert_features(self):
-        data = self.read_data(self.cleared_base_dataset_selenium_and_more_rare_class_path)
+        data = self.read_data(self.cleared_base_dataset_selenium_and_more_rare_class_path_NEW_PHISH)
         url_list = data["url"].tolist()
         features = self.extract_features_bert(url_list)
         features = features.numpy()
@@ -569,7 +605,7 @@ class DataPreprocessing:
         dataset = np.hstack((features, types.reshape((-1, 1))))
         columns = [f"feature_{i}" for i in range(num_features)] + ["type"]
         df = pd.DataFrame(dataset, columns=columns)
-        df.to_csv(self.bert_features_selected_768_selenium_and_more_rare_class_path, index=False, header=True)
+        df.to_csv(self.bert_features_selected_768_selenium_and_more_rare_class_path_NEW_PHISH, index=False, header=True)
     def extract_features_bert(self, texts, batch_size=32):
         all_features = []
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -843,7 +879,7 @@ class DataPreprocessing:
         train_data_list = []
         test_data_list = []
 
-        with pd.read_csv(self.bert_features_selected_768_browser_dataset_path, chunksize=chunk_size) as reader:
+        with pd.read_csv(self.bert_features_selected_768_selenium_and_more_rare_class_path_NEW_PHISH, chunksize=chunk_size) as reader:
             for i, chunk in enumerate(tqdm(reader, desc="Chunk processing: ", unit=" chunk")):
                 if chunk[label_column].nunique() < 2:
                     print("There is not enough data in this chunk for stratified partitioning!")
@@ -864,7 +900,7 @@ class DataPreprocessing:
         print(train_data[label_column].value_counts())
         print(test_data[label_column].value_counts())
 
-        train_data.to_csv(self.train_bert_features_selected_768_browser_dataset_path, index=False)
-        test_data.to_csv(self.test_bert_features_selected_768_browser_dataset_path, index=False)
+        train_data.to_csv(self.train_bert_features_selected_768_selenium_and_more_rare_class_dataset_path_NEW_PHISH, index=False)
+        test_data.to_csv(self.test_bert_features_selected_768_selenium_and_more_rare_class_dataset_path_NEW_PHISH, index=False)
 
         print(f" Completed split datasets!")
