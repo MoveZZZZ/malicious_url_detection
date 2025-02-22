@@ -35,6 +35,8 @@ class TrainModels:
             return self._DataPreprocessing.read_data(self._DataPreprocessing.train_bert_features_selected_768_dataset_path)
         elif self.data_option == "bert_350":
             return self._DataPreprocessing.read_data(self._DataPreprocessing.train_bert_PCA_features_selected_350_dataset_path)
+        elif self.data_option == "bert_768_browser":
+            return self._DataPreprocessing.read_data(self._DataPreprocessing.train_bert_features_selected_768_selenium_and_more_rare_class_dataset_path)
         else:
             print("Bad option!")
             return 0
@@ -46,6 +48,8 @@ class TrainModels:
             return self._DataPreprocessing.read_data(self._DataPreprocessing.test_bert_features_selected_768_dataset_path)
         elif self.data_option == "bert_350":
             return self._DataPreprocessing.read_data(self._DataPreprocessing.test_bert_PCA_features_selected_350_dataset_path)
+        elif self.data_option == "bert_768_browser":
+            return self._DataPreprocessing.read_data(self._DataPreprocessing.test_bert_features_selected_768_selenium_and_more_rare_class_dataset_path)
         else:
             print("Bad option!")
             return 0

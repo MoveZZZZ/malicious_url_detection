@@ -88,11 +88,11 @@ class DataPreprocessing:
             lin="/mnt/d/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768_test.csv"
         )
 
-        self.train_bert_features_selected_768_browser_dataset_path = self._select_path(
+        self.train_bert_features_selected_768_selenium_and_more_rare_class_dataset_path = self._select_path(
             win="D:/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768_browser_train.csv",
             lin="/mnt/d/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768_browser_train.csv"
         )
-        self.test_bert_features_selected_768_browser_dataset_path = self._select_path(
+        self.test_bert_features_selected_768_selenium_and_more_rare_class_dataset_path = self._select_path(
             win="D:/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768_browser_test.csv",
             lin="/mnt/d/PWR/Praca magisterska/Datasets/BERT_FEATURES/768/dataset_with_bert_features_768_browser_test.csv"
         )
