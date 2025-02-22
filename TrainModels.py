@@ -12,6 +12,7 @@ import tensorflow as tf
 from CustomModels import Optimization
 from transformers import BertTokenizer
 import torch
+import joblib
 from sklearn.metrics import accuracy_score, classification_report
 
 class TrainModels:
@@ -86,6 +87,7 @@ class TrainModels:
                                                                                                             _encoding_dim_AE,
                                                                                                             input_size)
                 scaler = self._TrainTestDataPreproc.create_scaler(X)
+                #joblib.dump(scaler, f"/mnt/d/PWR/Praca magisterska/models/minmax_scaler_bert_768.pkl")
                 X_train_without_saler_end, y_train = self._TrainTestDataPreproc.option_preprocessing(option,
                                                                                                      X_train_without_saler,
                                                                                                      y_train)
@@ -197,6 +199,7 @@ class TrainModels:
                 f"Best Epoch (EarlyStopping): {best_epoch if early_stopping.stopped_epoch > 0 else 'No EarlyStopping'}\n"
                 f"{self.LogCreator.string_spit_stars}"
             )
+            model.save(f"/mnt/d/PWR/Praca magisterska/models/{save_file_name}.keras")
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)
@@ -212,6 +215,7 @@ class TrainModels:
                 max_epochs = _epochs,
                 patience=5,
             )
+            torch.save(model, f"/mnt/d/PWR/Praca magisterska/models/{save_file_name}.pth")
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
         elif model_name == "bert2":
@@ -238,12 +242,11 @@ class TrainModels:
                 },
                 metrics={"classifier": ["accuracy"]}
             )
-            #self.print_model_summary(model)
             history = model.fit(
                 X_train,
                 {"decoder": X_train, "classifier": y_train},
                 epochs=_epochs,
-                batch_size=32,
+                batch_size=16,
                 validation_data=(X_test, {"decoder": X_test, "classifier": y_test}),
                 verbose=1,
                 callbacks=[early_stopping]
@@ -257,6 +260,7 @@ class TrainModels:
                 f"Best Epoch (EarlyStopping): {best_epoch if early_stopping.stopped_epoch > 0 else 'No EarlyStopping'}\n"
                 f"{self.LogCreator.string_spit_stars}"
             )
+            model.save(f"/mnt/d/PWR/Praca magisterska/models/{save_file_name}.keras")
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)
@@ -265,6 +269,7 @@ class TrainModels:
             y_train = y_train.to_numpy()
             y_test = y_test.to_numpy()
             model.fit(X_train, y_train)
+            joblib.dump(model, f"/mnt/d/PWR/Praca magisterska/models/{save_file_name}.pkl")
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.check_test_data(option,model, scaler, save_file_name)
