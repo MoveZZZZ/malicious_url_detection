@@ -35,15 +35,15 @@ def main():
     dataset = "bert_768_browser_np"
 
     NN_PARAMS ={
-        "option": 93,
-        "model_name": "deep_mlp_3",
+        "option": 92,
+        "model_name": "deep_mlp_7",
         "_activation_function": "relu",
         "_optimizer": "adamw",
-        "_loss": "categorical_crossentropy",
+        "_loss": "focal_loss",
         "_epochs": 30,
         "_num_centres_RBFL": 10,
         "_encoding_dim_AE": 8,
-        "_model_params_string": "512-64_layer"
+        "_model_params_string": "4096-64_layer"
     }
     ML_PARAMS ={
         "option": 96,

@@ -1,6 +1,6 @@
 from LogSystem import LogFileCreator
 import torch
-from CustomModels import DeepMLP_3, DeepMLP_5, GNN, RBFN, AutoencoderClassifier
+from CustomModels import DeepMLP_3, DeepMLP_5, DeepMLP_7, GNN, RBFN, AutoencoderClassifier
 from sklearn.ensemble import RandomForestClassifier
 from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
@@ -63,6 +63,12 @@ class ModelNameAndPathesCreator:
             model = DeepMLP_5(input_size, num_classes, _activation_function)
             #model.compile(optimizer=_optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
             save_file_name = f"DeepMLP_5_{end_file_name}_{_optimizer}_{_activation_function}"
+        elif model_name == "deep_mlp_7":
+            if input_size is None:
+                raise ValueError("DeepMLP_7 requires input_size to be specified")
+            model = DeepMLP_7(input_size, num_classes, _activation_function)
+            # model.compile(optimizer=_optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+            save_file_name = f"DeepMLP_7_{end_file_name}_{_optimizer}_{_activation_function}"
         elif model_name == "gnn":
             if input_size is None:
                 raise ValueError("GNN requires input_size to be specified")
