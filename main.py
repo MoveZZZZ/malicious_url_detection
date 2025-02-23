@@ -4,15 +4,18 @@ from DataPreprocessing import DataPreprocessing
 def main():
     #RFC, lgbm, xgb, mlp, tabnet, log_reg, deep_mlp_3, deep_mlp_5, gnn, rbfn
     # options = (
-    #     1: "full_data",
-    #     2: "smote",
-    #     3: "adasyn",
-    #     91: "bert_features_full_data",
-    #     92: "bert_features_smote",
-    #     93: "bert_features_adasyn",
-    #     911: "bert_features_full_data_with_minmax_scaler",
-    #     912: "bert_features_smote_with_minmax_scaler",
-    #     913: "bert_features_adasyn_with_minmax_scaler"
+    #     1: f"{db_name}_features_full_data",
+    #     2: f"{db_name}_features_smote_oversampling",
+    #     3: f"{db_name}_features_adasyn_oversampling",
+    #     4: f"{db_name}_features_smote_tomek",
+    #     5: f"{db_name}_features_smote_enn",
+    #     6: f"{db_name}_features_random_under",
+    #     91: f"{db_name}_features_full_data_scaled",
+    #     92: f"{db_name}_features_smote_oversampling_scaled",
+    #     93: f"{db_name}_features_adasyn_oversampling_scaled",
+    #     94: f"{db_name}_features_smote_tomek_scaled",
+    #     95: f"{db_name}_features_smote_enn_scaled",
+    #     96: f"{db_name}_features_random_under_scaled",
     # )
     # loss = (
     #     "categorical_crossentropy",
@@ -23,33 +26,39 @@ def main():
     #     "custom_features" -> dataset with custom selected features
     #     "bert_768" -> dataset with 768 selected bert features
     #     "bert_350" -> dataset with 350 selected bert+PCA features
+    #     "bert_768_browser" -> dataset with 768 selected bert features after seleniunm + new phishing/malware (with old)
+    #     "bert_768_browser_np" -> dataset with 768 selected bert features after seleniunm + new phishing/malware (without old)
     # )
     #option, model_name, _activation_function, _optimizer, _loss, _epochs , _num_centres_RBFL, _encoding_dim_AE, _model_params_string=""
 
-    dataset = "bert_768_browser"
-    log_filename = "test"
-    loss = "weighted_categorical_crossentropy"
+    log_filename= "test"
+    dataset = "bert_768_browser_np"
 
-    _dp = DataPreprocessing(log_filename)
-    _dp.select_bert_features()
+    NN_PARAMS ={
+        "option": 93,
+        "model_name": "deep_mlp_3",
+        "_activation_function": "relu",
+        "_optimizer": "adamw",
+        "_loss": "categorical_crossentropy",
+        "_epochs": 30,
+        "_num_centres_RBFL": 10,
+        "_encoding_dim_AE": 8,
+        "_model_params_string": "512-64_layer"
+    }
+    ML_PARAMS ={
+        "option": 96,
+        "model_name": "xgb",
+        "_activation_function": "",
+        "_optimizer": "",
+        "_loss": "",
+        "_epochs": 0,
+        "_num_centres_RBFL": 0,
+        "_encoding_dim_AE": 0,
+        "_model_params_string": ""
+    }
 
-    # _TrainModels = TrainModels(log_filename, dataset)
-    # _TrainModels.train_model(911,"AE","relu", "adamw","categorical_crossentropy",30,
-    #                          1,8,"")
-
-    #_dp.split_large_csv_into_train_and_test()
-
-    #_dp.extract_features_bert(["mp3raid.com/music/krizz_kaliko.html"])
-    #_TrainModels.train_model(911, "AE", "relu", "adamw","categorical_crossentropy",30, 1,8,"")
-    # _TrainModels.train_model(91, "RFC","", "","", 1, 1, 1, "bert_350")
-    # _TrainModels.train_model(911, "RFC","", "","", 1, 1, 1, "bert_350")
-    #
-    # _TrainModels.train_model(91, "lgbm","", "","", 1, 1, 1, "bert_350")
-    # _TrainModels.train_model(911, "lgbm","", "","", 1, 1, 1, "bert_350")
-    #
-    # _TrainModels.train_model(91, "xgb","", "","", 1, 1, 1, "bert_350")
-    # _TrainModels.train_model(911, "xgb","", "","", 1, 1, 1, "bert_350")
-
+    _TrainModels = TrainModels(log_filename, dataset)
+    _TrainModels.train_model(**NN_PARAMS)
 
 
 

@@ -9,14 +9,19 @@ from CustomModels import *
 
 class CM_and_ROC_creator:
     def __init__(self, log_filename):
-        # self.matrix_path = f"D:/PWR/Praca magisterska/Images/CM"
-        # self.ROC_path = f"D:/PWR/Praca magisterska/Images/ROC"
-        # self.train_history_path = f"D:/PWR/Praca magisterska/Images/TH"
-
-        self.train_history_path = f"/mnt/d/PWR/Praca magisterska/Images/TH"
-        self.matrix_path = f"/mnt/d/PWR/Praca magisterska/Images/CM"
-        self.ROC_path = f"/mnt/d/PWR/Praca magisterska/Images/ROC"
-
+        self.os_interp_type = "win"
+        self.train_history_path = self._select_path(
+            win = f"D:/PWR/Praca magisterska/Images/TH",
+            lin = f"/mnt/d/PWR/Praca magisterska/Images/TH"
+        )
+        self.matrix_path = self._select_path(
+            win = f"D:/PWR/Praca magisterska/Images/CM",
+            lin = f"/mnt/d/PWR/Praca magisterska/Images/CM"
+        )
+        self.ROC_path = self._select_path(
+            win = f"D:/PWR/Praca magisterska/Images/ROC",
+            lin = f"/mnt/d/PWR/Praca magisterska/Images/ROC"
+        )
         self.LogCreator = LogFileCreator(log_filename)
         self.label_mapping_url = {
             'benign': 0,
@@ -25,6 +30,8 @@ class CM_and_ROC_creator:
             'malware': 3
         }
 
+    def _select_path(self, win, lin):
+        return win if self.os_interp_type == "win" else lin
     def create_confusion_matrix(self, model, X_test, y_test, save_file_name):
         if type(model).__name__ == "TFBertForSequenceClassification":
             pred_probs = model.predict([X_test["input_ids"], X_test["attention_mask"]])
@@ -53,7 +60,9 @@ class CM_and_ROC_creator:
                     y_true = np.argmax(y_test, axis=1) if y_test.ndim > 1 else y_test
                     acc = accuracy_score(y_true, y_pred)
             else:
-                acc = model.evaluate(X_test, y_test, verbose=0)[1]
+                test = model.evaluate(X_test, y_test, verbose=0)
+                print(test)
+                acc = test[1]
                 pred = np.argmax(model.predict(X_test), axis=1)
                 if len(y_test.shape) > 1 and y_test.shape[1] > 1:
                     y_test = np.argmax(y_test, axis=1)

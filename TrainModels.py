@@ -26,7 +26,14 @@ class TrainModels:
         print(tf.config.list_physical_devices('GPU'))
         print(torch.backends.cudnn.version())
         self.data_option = _data_option
+        self.os_interp_type = "win"
+        self.models_save_path = self._select_path(
+            win = f"D:/PWR/Praca magisterska/models",
+            lin = f"/mnt/d/PWR/Praca magisterska/models"
+        )
 
+    def _select_path(self, win, lin):
+        return win if self.os_interp_type == "win" else lin
     def choise_train_dataset_option(self):
         self.LogCreator.print_and_write_log(f"Start load train data: {self.data_option}")
         if self.data_option == "custom_features":
@@ -63,9 +70,18 @@ class TrainModels:
             data = self._DataPreprocessing.read_data(self._DataPreprocessing.train_cleared_base_dataset_path)
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
             del data
+            input_size = X.shape[1]
             tokenizer_model_name = "bert-base-uncased"
             tokenizer = BertTokenizer.from_pretrained(tokenizer_model_name)
-            model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer)
+            model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option,
+                                                                                                        model_name,
+                                                                                                        _activation_function,
+                                                                                                        _optimizer,
+                                                                                                        _num_centres,
+                                                                                                        _encoding_dim_AE,
+                                                                                                        input_size,
+                                                                                                        4,
+                                                                                                        self.data_option)
             X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.prepare_data_bert_2(X, y, tokenizer)
             scaler = None
         else:
@@ -74,31 +90,21 @@ class TrainModels:
                 X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
                 del data
                 input_size = X.shape[1]
-                X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y, 0.2,42)
-                model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option, model_name, _activation_function, _optimizer,
-                                                                                                        _num_centres ,_encoding_dim_AE,input_size)
-                X_train, y_train = self._TrainTestDataPreproc.option_preprocessing(option, X_train, y_train)
-                X_train = X_train.to_numpy()
-                X_test = X_test.to_numpy()
-                scaler = None
-            elif option in [911,912,913,914,915]:
-                data = self.choise_train_dataset_option()
-                X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
-                del data
-                input_size = X.shape[1]
                 X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(
-                    X, y,
-                    0.2,
-                    42)
+                                                                                                           X, y,
+                                                                                                   0.2,
+                                                                                                42)
                 model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option,
                                                                                                             model_name,
                                                                                                             _activation_function,
                                                                                                             _optimizer,
                                                                                                             _num_centres,
                                                                                                             _encoding_dim_AE,
-                                                                                                            input_size)
+                                                                                                            input_size,
+                                                                                                            4,
+                                                                                                            self.data_option)
                 scaler = self._TrainTestDataPreproc.create_scaler(X)
-                joblib.dump(scaler, f"/mnt/d/PWR/Praca magisterska/models/minmax_scaler_bert_768.pkl")
+                joblib.dump(scaler, f"{self.models_save_path}/minmax_scaler_{self._ModelNameAndPathesCreator.define_type_of_option(option, self.data_option)}.pkl")
                 X_train_without_saler_end, y_train = self._TrainTestDataPreproc.option_preprocessing(option,
                                                                                                      X_train_without_saler,
                                                                                                      y_train)
@@ -111,7 +117,7 @@ class TrainModels:
                 X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
                 del data
                 input_size = X.shape[1]
-                X_train_without_saler, X_test_without_saler, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y,
+                X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y,
                                                                                                                   0.2,
                                                                                                                   42)
                 model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option,
@@ -120,13 +126,15 @@ class TrainModels:
                                                                                                             _optimizer,
                                                                                                             _num_centres,
                                                                                                             _encoding_dim_AE,
-                                                                                                            input_size)
-                scaler = self._TrainTestDataPreproc.create_scaler(X)
-                X_train_without_saler_end, y_train = self._TrainTestDataPreproc.option_preprocessing(option, X_train_without_saler, y_train)
-                X_train, X_test = self._TrainTestDataPreproc.scale_data(scaler, X_train_without_saler_end, X_test_without_saler)
+                                                                                                            input_size,
+                                                                                                            4,
+                                                                                                            self.data_option)
+
+                X_train, y_train = self._TrainTestDataPreproc.option_preprocessing(option, X_train, y_train)
                 X_train = X_train.to_numpy()
                 X_test = X_test.to_numpy()
-        return model, save_file_name+f"_{self.data_option}", X_train, X_test, y_train, y_test, scaler
+                scaler = None
+        return model, save_file_name, X_train, X_test, y_train, y_test, scaler
 
     def print_model_summary(self, model):
         print(f"Optimizer: {model.optimizer.__class__.__name__}")
@@ -177,7 +185,7 @@ class TrainModels:
         elif model_name == "RBFL":
             txt = f"num_centres = {_num_centres_RBFL}"
 
-        self.LogCreator.print_and_write_log(f"Train {model_name} with using {self._ModelNameAndPathesCreator.define_type_of_option(option)}\n"
+        self.LogCreator.print_and_write_log(f"Train {model_name} with using {self._ModelNameAndPathesCreator.define_type_of_option(option, self.data_option)}\n"
                                             f"Activation_function: {_activation_function}\n"
                                             f"Optimizer: {_optimizer}\n"
                                             f"Loss: {_loss}\n"
@@ -199,7 +207,7 @@ class TrainModels:
             early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3, restore_best_weights=True)
             model.compile(optimizer=_optimizer, loss = loss_end, metrics = ['accuracy'])
             #self.print_model_summary(model)
-            history = model.fit(X_train, y_train, epochs=_epochs, batch_size=32, validation_data=(X_test, y_test),
+            history = model.fit(X_train, y_train, epochs=_epochs, batch_size=16, validation_data=(X_test, y_test),
                       verbose=1, callbacks=[early_stopping])
             trained_epochs = len(history.epoch)
             best_epoch = early_stopping.stopped_epoch if early_stopping.stopped_epoch > 0 else trained_epochs
@@ -210,7 +218,7 @@ class TrainModels:
                 f"Best Epoch (EarlyStopping): {best_epoch if early_stopping.stopped_epoch > 0 else 'No EarlyStopping'}\n"
                 f"{self.LogCreator.string_spit_stars}"
             )
-            model.save(f"/mnt/d/PWR/Praca magisterska/models/{save_file_name}.keras")
+            model.save(f"{self.models_save_path}/{save_file_name}.keras")
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)
@@ -226,7 +234,7 @@ class TrainModels:
                 max_epochs = _epochs,
                 patience=5,
             )
-            torch.save(model, f"/mnt/d/PWR/Praca magisterska/models/{save_file_name}.pth")
+            torch.save(model, f"{self.models_save_path}/{save_file_name}.pth")
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
         elif model_name == "bert2":
@@ -271,7 +279,7 @@ class TrainModels:
                 f"Best Epoch (EarlyStopping): {best_epoch if early_stopping.stopped_epoch > 0 else 'No EarlyStopping'}\n"
                 f"{self.LogCreator.string_spit_stars}"
             )
-            model.save(f"/mnt/d/PWR/Praca magisterska/models/{save_file_name}.keras")
+            model.save(f"{self.models_save_path}/{save_file_name}.keras")
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)
@@ -280,7 +288,7 @@ class TrainModels:
             y_train = y_train.to_numpy()
             y_test = y_test.to_numpy()
             model.fit(X_train, y_train)
-            joblib.dump(model, f"/mnt/d/PWR/Praca magisterska/models/{save_file_name}.pkl")
+            joblib.dump(model, f"{self.models_save_path}/{save_file_name}.pkl")
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.check_test_data(option,model, scaler, save_file_name)
@@ -294,15 +302,17 @@ class TrainModels:
     def check_test_data(self, option, model, scaler, save_filename):
         data = self.choise_test_dataset_option()
         X, y_test = self._TrainTestDataPreproc.create_X_and_Y(data)
-        if option in [91,92,93]:
-            X_test_scaled = X
-        else:
+        if option in [91,92,93,94,95,96]:
             X_test_scaled, _ = self._TrainTestDataPreproc.scale_data(scaler, X)
+        else:
+            X_test_scaled = X
         if len(y_test.shape) > 1 and y_test.shape[1] > 1:
             y_test = np.argmax(y_test, axis=1)
         if type(model).__name__ in ['RandomForestClassifier', 'LogisticRegression',
                                     'XGBClassifier', 'MLPClassifier']:
             y_test = np.array(y_test)
+        if isinstance(model, models.Model):
+            y_test = to_categorical(y_test, num_classes=4)
         self.CM_and_ROC_creator.create_confusion_matrix(model, X_test_scaled, y_test, save_filename+"_test_data")
         self.CM_and_ROC_creator.create_ROC(model, X_test_scaled, y_test, save_filename+"_test_data")
 

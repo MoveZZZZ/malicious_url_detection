@@ -19,7 +19,7 @@ from sklearn.decomposition import PCA
 class DataPreprocessing:
     def __init__(self, log_filename):
 
-        self.os_interp_type = "linux"
+        self.os_interp_type = "win"
 
         #BASE DATASET
         self.base_dataset_path = self._select_path(
@@ -119,43 +119,26 @@ class DataPreprocessing:
 
 
         self.cleared_base_dataset_selenium_and_more_rare_class_path_NEW_PHISH=self._select_path(
-            win="/mnt/f/data/dataset_mal_cleared_full_np.csv",
+            win="F:/data/dataset_mal_cleared_full_np.csv",
             lin="/mnt/f/data/dataset_mal_cleared_full_np.csv"
         )
 
         self.bert_features_selected_768_selenium_and_more_rare_class_path_NEW_PHISH = self._select_path(
-            win="/mnt/f/data/dataset_with_bert_browser_features_768_np.csv",
+            win="F:/data/dataset_with_bert_browser_features_768_np.csv",
             lin="/mnt/f/data/dataset_with_bert_browser_features_768_np.csv"
         )
 
         self.train_bert_features_selected_768_selenium_and_more_rare_class_dataset_path_NEW_PHISH = self._select_path(
-            win="/mnt/f/data/dataset_with_bert_features_768_browser_train_np.csv",
+            win="F:/data/dataset_with_bert_features_768_browser_train_np.csv",
             lin="/mnt/f/data/dataset_with_bert_features_768_browser_train_np.csv"
         )
         self.test_bert_features_selected_768_selenium_and_more_rare_class_dataset_path_NEW_PHISH = self._select_path(
-            win="/mnt/f/data/dataset_with_bert_features_768_browser_test_np.csv",
+            win="F:/data/dataset_with_bert_features_768_browser_np_test.csv",
             lin="/mnt/f/data/dataset_with_bert_features_768_browser_np_test.csv"
         )
 
 
 
-
-
-        #self.base_dataset=self.read_data(self.base_dataset_path)
-        #self.cleared_base_dataset = self.read_data(self.cleared_base_dataset_path)
-        #self.custom_fetures_seleted_dataset = self.read_data(self.custom_fetures_seleted_dataset_path)
-        #self.custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.custom_fetures_seleted_cleared_and_vetorized_dataset_path)
-        #self.bert_features_selected_768_dataset = self.read_data(self.bert_features_selected_768_dataset_path)
-
-
-        #self.train_cleared_base_dataset = self.read_data(self.train_cleared_base_dataset_path)
-        #self.test_cleared_base_dataset = self.read_data(self.test_cleared_base_dataset_path)
-
-        #self.train_custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.train_custom_fetures_seleted_cleared_and_vetorized_dataset_path)
-        #self.test_custom_fetures_seleted_cleared_and_vetorized_dataset = self.read_data(self.test_custom_fetures_seleted_cleared_and_vetorized_dataset_path)
-
-        #self.train_bert_features_selected_768_dataset = self.read_data(self.train_bert_features_selected_768_dataset_path)
-        #self.test_bert_features_selected_768_dataset = self.read_data(self.test_bert_features_selected_768_dataset_path)
 
 
         self.LogCreator = LogFileCreator(log_filename)
@@ -585,8 +568,9 @@ class DataPreprocessing:
         self.model = BertModel.from_pretrained(self.tokenizer_model_name, output_hidden_states=True)
         self.model.eval()
 
+
     def _select_path(self, win, lin):
-        return win if self.os_interp_type == "Windows" else lin
+        return win if self.os_interp_type == "win" else lin
     def read_data(self, file_path):
         try:
             data = pd.read_csv(file_path)
@@ -594,9 +578,8 @@ class DataPreprocessing:
         except Exception as e:
             print(f"Failed to read file {file_path}: {e}")
             return None
-
-    def select_bert_features(self):
-        data = self.read_data(self.cleared_base_dataset_selenium_and_more_rare_class_path_NEW_PHISH)
+    def select_bert_features(self, data_path, data_save_path):
+        data = self.read_data(data_path)
         url_list = data["url"].tolist()
         features = self.extract_features_bert(url_list)
         features = features.numpy()
@@ -605,7 +588,7 @@ class DataPreprocessing:
         dataset = np.hstack((features, types.reshape((-1, 1))))
         columns = [f"feature_{i}" for i in range(num_features)] + ["type"]
         df = pd.DataFrame(dataset, columns=columns)
-        df.to_csv(self.bert_features_selected_768_selenium_and_more_rare_class_path_NEW_PHISH, index=False, header=True)
+        df.to_csv(data_save_path, index=False, header=True)
     def extract_features_bert(self, texts, batch_size=32):
         all_features = []
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -624,27 +607,18 @@ class DataPreprocessing:
             batch_features = torch.mean(token_vecs, dim=1)
             all_features.append(batch_features.cpu())
         return torch.cat(all_features, dim=0)
-
-    def select_bert_features_with_PCA (self):
+    def select_bert_features_with_PCA (self, data_path, data_save_path):
         n_components = 350
-        df = self.test_bert_features_selected_768_dataset
+        df = self.read_data(data_path)
         labels = df["type"].values
         features = df.drop(columns=["type"]).values
-
         print(f"Data downloaded! Size: {features.shape}")
-
-
         pca = PCA(n_components=n_components)
         features_pca = pca.fit_transform(features)
-
         print("PCA is complete! New dimensionality:", features_pca.shape)
-
         columns = [f"feature_{i}" for i in range(n_components)] + ["type"]
         df_pca = pd.DataFrame(np.hstack((features_pca, labels.reshape(-1, 1))), columns=columns)
-
-        df_pca.to_csv(self.test_bert_PCA_features_selected_350_dataset_path, index=False)
-
-
+        df_pca.to_csv(data_save_path, index=False)
     def print_dataset_info (self, data):
         print(data['type'].value_counts())
     def print_first_20_row(self,data):
@@ -665,16 +639,15 @@ class DataPreprocessing:
             f"{self.LogCreator.string_spit_stars}")
         self.print_dataset_info(data)
         return data
-    def clear_empty_values_and_save_full_dataset(self):
-        df = self.base_dataset.copy()
+    def clear_empty_values_and_save_full_dataset(self, data_path, data_save_path):
+        df = self.read_data(data_path)
         df = self.change_data_labels(df)
         valid_types = {0, 1, 2, 3}
         df = df[df['type'].isin(valid_types)]
         df.dropna()
-        df.to_csv(self.cleared_base_dataset_path, index=False)
-
-    def clear_and_vectorize_finally_dataset(self):
-        df = self.custom_fetures_seleted_dataset.copy()
+        df.to_csv(data_save_path, index=False)
+    def clear_and_vectorize_finally_dataset(self, data_path, data_save_path):
+        df = self.read_data(data_path)
         binary_features = [
             "contains_ip", "abnormal_url", "shortening_service", "c2_tld", "suspicious_tld",
             "malware_tld", "c2_malicious_tld", "phishing_tld", "sensitive_tld", "contains_suspicious_words"
@@ -688,13 +661,12 @@ class DataPreprocessing:
         df_vectorized['extract_root_domain_vector'] = df['root_domain'].apply(self.fast_hash_encode)
         df_vectorized['get_url_region_vector'] = df['region'].apply(self.fast_hash_encode)
         df_vectorized.drop(columns=['root_domain', 'region', 'url'], inplace=True, axis=1)
-        df_vectorized.to_csv(self.custom_fetures_seleted_cleared_and_vetorized_dataset_path, index=False)
-
-    def refractoring_and_save_features_dataset(self):
-        data = self.cleared_base_dataset.copy()
+        df_vectorized.to_csv(data_save_path, index=False)
+    def refractoring_and_save_features_dataset(self, data_path, data_save_path):
+        data = self.read_data(data_path)
         features_df = data["url"].apply(self.extract_features).apply(pd.Series)
         _data = pd.concat([data, features_df], axis=1)
-        _data.to_csv(self.custom_fetures_seleted_dataset_path,index=False)
+        _data.to_csv(data_save_path ,index=False)
 
     def extract_features(self, url):
         features = {}
@@ -712,8 +684,6 @@ class DataPreprocessing:
         features["www_amount"] = self.count_www(url)
         features["atrate_amount"] = self.count_atrate(url)
 
-
-
         features["contains_ip"] = self.if_contains_ip(url)
         features["abnormal_url"] = self.abnormal_url(url)
         features["shortening_service"] = self.shortening_service(url)
@@ -721,8 +691,6 @@ class DataPreprocessing:
         features["root_domain"] = self.extract_root_domain(url)
         features["domain_length"], features["num_subdomains"] = self.domain_information(url)
         #features["domain_age"] = self.domain_age(url) # 99.9% -1 = constant
-
-
 
         features["c2_tld"] = self.C2_TLD_check(url)
         features["suspicious_tld"] = self.suspicious_TLD_check(url)
@@ -745,24 +713,19 @@ class DataPreprocessing:
         return url.count('?')
     def count_hyphen(self,url):
         return url.count('-')
-
     def count_equal(self,url):
         return url.count('=')
-
     def count_dot(self, url):
         count_dot = url.count('.')
         return count_dot
-
     def count_www(self, url):
         url.count('www')
         return url.count('www')
     def count_atrate(self, url):
         return url.count('@')
-
     def count_letters(self, url):
         num_letters = sum(char.isalpha() for char in url)
         return num_letters
-
     def count_digits(self, url):
         num_digits = sum(char.isdigit() for char in url)
         return num_digits
@@ -854,53 +817,44 @@ class DataPreprocessing:
             if primary_domain.endswith(ccTLD):
                 return self.ccTLD_to_region[ccTLD]
         return "Global"
-    def split_dataset_into_train_and_test_files (self, full_data):
+    def split_dataset_into_train_and_test_files (self, full_data_path, train_data_path, test_data_path):
         label_column = 'type'
         test_size = 0.1
+        full_data = self.read_data(full_data_path)
         X = full_data.drop(columns=[label_column])
         y = full_data[label_column]
         print(y.value_counts())
         strat_split = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=42)
-
         for train_idx, test_idx in strat_split.split(X, y):
             train_data = full_data.iloc[train_idx]
             test_data = full_data.iloc[test_idx]
         self.print_dataset_info(full_data)
         self.print_dataset_info(train_data)
         self.print_dataset_info(test_data)
-        train_data.to_csv(self.train_bert_features_selected_768_dataset_path, index=False)
-        test_data.to_csv(self.test_bert_features_selected_768_dataset_path, index=False)
+        train_data.to_csv(train_data_path, index=False)
+        test_data.to_csv(test_data_path, index=False)
         print("Completed split datasets!")
-
-    def split_large_csv_into_train_and_test(self, chunk_size=10000, test_size=0.1):
-
+    def split_large_csv_into_train_and_test(self, data_path, train_data_path, test_data_path, chunk_size=10000, test_size=0.1):
         label_column = 'type'
-
         train_data_list = []
         test_data_list = []
-
-        with pd.read_csv(self.bert_features_selected_768_selenium_and_more_rare_class_path_NEW_PHISH, chunksize=chunk_size) as reader:
+        with pd.read_csv(data_path, chunksize=chunk_size) as reader:
             for i, chunk in enumerate(tqdm(reader, desc="Chunk processing: ", unit=" chunk")):
                 if chunk[label_column].nunique() < 2:
                     print("There is not enough data in this chunk for stratified partitioning!")
                     continue
-
                 X = chunk.drop(columns=[label_column])
                 y = chunk[label_column]
                 strat_split = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=42)
                 for train_idx, test_idx in strat_split.split(X, y):
                     train_data_list.append(chunk.iloc[train_idx])
                     test_data_list.append(chunk.iloc[test_idx])
-
         train_data = pd.concat(train_data_list, ignore_index=True)
         test_data = pd.concat(test_data_list, ignore_index=True)
-
         print("Fin size:")
         print(f"Train: {train_data.shape}, Test: {test_data.shape}")
         print(train_data[label_column].value_counts())
         print(test_data[label_column].value_counts())
-
-        train_data.to_csv(self.train_bert_features_selected_768_selenium_and_more_rare_class_dataset_path_NEW_PHISH, index=False)
-        test_data.to_csv(self.test_bert_features_selected_768_selenium_and_more_rare_class_dataset_path_NEW_PHISH, index=False)
-
+        train_data.to_csv(train_data_path, index=False)
+        test_data.to_csv(test_data_path, index=False)
         print(f" Completed split datasets!")

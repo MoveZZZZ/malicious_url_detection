@@ -9,6 +9,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from tqdm import tqdm
 import tensorflow as tf
 from imblearn.over_sampling import SMOTE, ADASYN
+from imblearn.under_sampling import RandomUnderSampler
 from imblearn.combine import SMOTETomek, SMOTEENN
 
 class TrainTestDataPreprocessing:
@@ -125,18 +126,21 @@ class TrainTestDataPreprocessing:
         return X_train_scaled, X_test_scaled
 
     def option_preprocessing(self, option, X, y):
-        if option in [2, 92, 912]:
+        if option in [2, 92]:
             X_resampled, y_resampled = self.smote_oversampling(X,y)
-        elif option in [3, 93, 913]:
+        elif option in [3, 93]:
             X_resampled, y_resampled = self.adasyn_oversampling(X,y)
-        elif option in [4, 94, 914]:
+        elif option in [4, 94]:
             X_resampled, y_resampled = self.smote_tomek(X,y)
-        elif option in [5, 95, 915]:
+        elif option in [5, 95]:
             X_resampled, y_resampled = self.smote_enn(X,y)
+        elif option in [6,96]:
+            X_resampled, y_resampled = self.random_under(X, y)
         else:
             X_resampled = X
             y_resampled = y
         return X_resampled, y_resampled
+
 
     def smote_oversampling(self, X, y, sampling_strategy='auto', random_state=42):
         self.LogCreator.print_and_write_log(f"Start SMOTE oversampling\n"
@@ -205,5 +209,17 @@ class TrainTestDataPreprocessing:
         self.LogCreator.print_and_write_log(f"End SMOTE_ENN \n"
                                             f"Data after SMOTE_ENN: {pd.Series(y_resampled).value_counts()}\n"
                                             f"Time to SMOTE_ENN: {self.LogCreator.count_time(smote_enn_start, smote_enn_end):.2f} s.\n"
+                                            f"{self.LogCreator.string_spit_stars}")
+        return X_resampled, y_resampled
+    def random_under(self, X,y, sampling_strategy='auto', random_state=42):
+        self.LogCreator.print_and_write_log(f"Start RandomUnder \n"
+                                            f"Data before RandomUnder: {pd.Series(y).value_counts()}")
+        RandomUnder_start = time.time()
+        RandomUnder = RandomUnderSampler(sampling_strategy=sampling_strategy, random_state=random_state)
+        X_resampled, y_resampled = RandomUnder.fit_resample(X, y)
+        RandomUnder_end = time.time()
+        self.LogCreator.print_and_write_log(f"End RandomUnder \n"
+                                            f"Data after RandomUnder: {pd.Series(y_resampled).value_counts()}\n"
+                                            f"Time to RandomUnder: {self.LogCreator.count_time(RandomUnder_start, RandomUnder_end):.2f} s.\n"
                                             f"{self.LogCreator.string_spit_stars}")
         return X_resampled, y_resampled

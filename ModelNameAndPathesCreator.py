@@ -12,9 +12,9 @@ class ModelNameAndPathesCreator:
     def __init__(self, log_filename):
         self.LogCreator = LogFileCreator(log_filename)
 
-    def create_model_name_and_output_pathes(self, option, model_name, _activation_function='relu', _optimizer='adam', _num_centres=10, _encoding_dim_AE=10, input_size=None ,num_classes=4):
+    def create_model_name_and_output_pathes(self, option, model_name, _activation_function='relu', _optimizer='adam', _num_centres=10, _encoding_dim_AE=10, input_size=None ,num_classes=4, db_name=""):
         model = None
-        end_file_name = self.define_type_of_option(option)
+        end_file_name = self.define_type_of_option(option, db_name)
 
         if model_name == "RFC":
             model = RandomForestClassifier()
@@ -56,13 +56,13 @@ class ModelNameAndPathesCreator:
                 raise ValueError("DeepMLP_3 requires input_size to be specified")
             model = DeepMLP_3(input_size, num_classes, _activation_function)
             model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-            save_file_name = f"DeepMLP_3_layer_{end_file_name}_{_optimizer}_{_activation_function}"
+            save_file_name = f"DeepMLP_3_{end_file_name}_{_optimizer}_{_activation_function}"
         elif model_name == "deep_mlp_5":
             if input_size is None:
                 raise ValueError("DeepMLP_5 requires input_size to be specified")
             model = DeepMLP_5(input_size, num_classes, _activation_function)
             #model.compile(optimizer=_optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-            save_file_name = f"DeepMLP_5_layer_{end_file_name}_{_optimizer}_{_activation_function}"
+            save_file_name = f"DeepMLP_5_{end_file_name}_{_optimizer}_{_activation_function}"
         elif model_name == "gnn":
             if input_size is None:
                 raise ValueError("GNN requires input_size to be specified")
@@ -89,22 +89,19 @@ class ModelNameAndPathesCreator:
         return model, save_file_name
 
 
-    def define_type_of_option(self, option):
+    def define_type_of_option(self, option, db_name):
         file_end_map = {
-            1: "full_data",
-            2: "smote_oversampling",
-            3: "adasyn_oversampling",
-            4: "smote_tomek",
-            5: "smote_enn",
-            91: "bert_features_full_data",
-            92: "bert_features_smote_oversampling",
-            93: "bert_features_adasyn_oversampling",
-            94: "bert_features_smote_tomek",
-            95: "bert_features_smote_enn",
-            911: "bert_features_full_data_scaled",
-            912: "bert_features_smote_oversampling_scaled",
-            913: "bert_features_adasyn_oversampling_scaled",
-            914: "bert_features_smote_tomek_scaled",
-            915: "bert_features_smote_enn_scaled"
+            1: f"{db_name}_features_full_data",
+            2: f"{db_name}_features_smote_oversampling",
+            3: f"{db_name}_features_adasyn_oversampling",
+            4: f"{db_name}_features_smote_tomek",
+            5: f"{db_name}_features_smote_enn",
+            6: f"{db_name}_features_random_under",
+            91: f"{db_name}_features_full_data_scaled",
+            92: f"{db_name}_features_smote_oversampling_scaled",
+            93: f"{db_name}_features_adasyn_oversampling_scaled",
+            94: f"{db_name}_features_smote_tomek_scaled",
+            95: f"{db_name}_features_smote_enn_scaled",
+            96: f"{db_name}_features_random_under_scaled",
         }
         return file_end_map.get(option, "UNKNOWN_OPTION")
