@@ -2,6 +2,7 @@ import os
 import pyautogui
 import textwrap
 from TrainModels import TrainModels
+from LogSystem import LogFileCreator
 class Menu:
     def __init__(self):
         self.db_name = None
@@ -72,7 +73,7 @@ class Menu:
         "_epochs": 0,
         "_num_centres_RBFL": 0,
         "_encoding_dim_AE": 0,
-        "_model_params_string": ""
+        "_model_params_string": None
         }
         self.dataset = None
 
@@ -166,8 +167,8 @@ class Menu:
                 print("Error: the string must contain no more than 15 characters. Try again.")
     def write_log_file_name(self):
         while True:
-            user_input = input("Enter a filename (up to 15 characters): ")
-            if len(user_input) <= 15:
+            user_input = input("Enter a filename (up to 30 characters): ")
+            if len(user_input) <= 30:
                 self.log_filename = user_input
                 print(f"Entered string: {user_input}")
                 return
@@ -184,36 +185,47 @@ class Menu:
                 print("Error: enter an integer.")
 
     def print_summary(self):
-        table_width = 90
-        left_col_width = 30
-        right_col_width = table_width - left_col_width - 3
-        border = "=" * table_width
-        print(border)
-        print("|{:^{width}}|".format("SUMMARY OF SELECTED PARAMETERS", width=table_width - 2))
-        print(border)
-        def print_row(key, value):
+        print()
+        table_width = 95
+        left_col_width = 25
+        right_col_width = table_width - left_col_width - 8
+        border = "=" * (table_width-1)
+        _log = LogFileCreator(self.log_filename)
+        summary_lines = []
+        summary_lines.append(border)
+        summary_lines.append("|{:^{width}}|".format("SUMMARY OF SELECTED PARAMETERS", width=table_width-3))
+        summary_lines.append(border)
+
+        def add_row(key, value):
             wrapped_value = textwrap.wrap(value, width=right_col_width)
             if not wrapped_value:
                 wrapped_value = ['']
-            print(
-                "| {:<{lcol}} | {:<{rcol}} |".format(key, wrapped_value[0], lcol=left_col_width, rcol=right_col_width))
+            summary_lines.append("| {:<{lcol}} | {:<{rcol}} |".format(key, wrapped_value[0],
+                                                                      lcol=left_col_width, rcol=right_col_width))
             for line in wrapped_value[1:]:
-                print("| {:<{lcol}} | {:<{rcol}} |".format("", line, lcol=left_col_width, rcol=right_col_width))
+                summary_lines.append("| {:<{lcol}} | {:<{rcol}} |".format("", line,
+                                                                          lcol=left_col_width, rcol=right_col_width))
+
         dataset_str = self.datasets_description[self.datasets.index(self.dataset) + 1]
-        print_row("Dataset:", dataset_str)
-        print_row("Option:", self.options.get(self.params['option'], 'N/A'))
-        print_row("Model Name:", self.params.get('model_name', 'N/A'))
-        print_row("Activation Function:", self.params.get('_activation_function', 'N/A'))
-        print_row("Optimizer:", self.params.get('_optimizer', 'N/A'))
-        print_row("Loss Function:", self.params.get('_loss', 'N/A'))
-        print_row("Epochs:", str(self.params.get('_epochs', 'N/A')))
+        add_row("Dataset:", dataset_str)
+        add_row("Option:", self.options.get(self.params['option'], 'N/A'))
+        add_row("Model Name:", self.params.get('model_name', 'N/A'))
+        if self.params["model_name"] in self.models_nn:
+            add_row("Activation Function:", self.params.get('_activation_function', 'N/A'))
+            add_row("Optimizer:", self.params.get('_optimizer', 'N/A'))
+            add_row("Loss Function:", self.params.get('_loss', 'N/A'))
+            add_row("Epochs:", str(self.params.get('_epochs', 'N/A')))
         if self.params["model_name"] == "AE":
-            print_row("Encoding Dimension (AE):", str(self.params.get('_encoding_dim_AE', 'N/A')))
+            add_row("Encoding Dimension (AE):", str(self.params.get('_encoding_dim_AE', 'N/A')))
         elif self.params["model_name"] == "RBFL":
-            print_row("Number of Centres (RBFL):", str(self.params.get('_num_centres_RBFL', 'N/A')))
-        print_row("Model Params String:", self.params.get('_model_params_string', 'N/A'))
-        print_row("Log_filename:", self.log_filename)
-        print(border)
+            add_row("Number of Centres (RBFL):", str(self.params.get('_num_centres_RBFL', 'N/A')))
+        add_row("Log_filename:", self.log_filename)
+        add_row("Model Params String:",
+                "N/A" if self.params.get('_model_params_string', 'N/A') == "" else self.params.get(
+                    '_model_params_string', 'N/A'))
+        summary_lines.append(border)
+        summary_text = "\n".join(summary_lines)
+        _log.print_and_write_log(summary_text)
     def train(self):
         _TrainModel = TrainModels(self.log_filename, self.dataset)
         _TrainModel.train_model(**self.params)
@@ -234,7 +246,6 @@ class Menu:
             self.select_model_ml()
             print(42 * "=")
             self.write_model_params_string()
-            print(42 * "=")
         else:
             self.select_model_nn()
             print(42 * "=")

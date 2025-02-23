@@ -179,19 +179,6 @@ class TrainModels:
             return ""
         return loss_mapping[_loss]
     def train_model(self, option, model_name, _activation_function="", _optimizer="", _loss="", _epochs = 1, _num_centres_RBFL=10, _encoding_dim_AE = 10, _model_params_string=""):
-        txt = "No more config information"
-        if model_name == "AE":
-            txt = f"dim_AE = {_encoding_dim_AE}"
-        elif model_name == "RBFL":
-            txt = f"num_centres = {_num_centres_RBFL}"
-
-        self.LogCreator.print_and_write_log(f"Train {model_name} with using {self._ModelNameAndPathesCreator.define_type_of_option(option, self.data_option)}\n"
-                                            f"Activation_function: {_activation_function}\n"
-                                            f"Optimizer: {_optimizer}\n"
-                                            f"Loss: {_loss}\n"
-                                            f"{txt}\n"
-                                            f"{self.LogCreator.string_spit_tilds}")
-
         model, save_file_name, X_train, X_test, y_train, y_test, scaler = self.data_pathes_and_model_creation(option, model_name,
                                                                                                               _activation_function, _optimizer,
                                                                                                               _num_centres_RBFL, _encoding_dim_AE)
