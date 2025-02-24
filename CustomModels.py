@@ -120,19 +120,32 @@ class GNN(models.Model):
 
 
 class RBFLayer(layers.Layer):
-    def __init__(self, num_centers, **kwargs):
+    def __init__(self, num_centers, centers_init=None, **kwargs):
         super(RBFLayer, self).__init__(**kwargs)
         self.num_centers = num_centers
+        self.centers_init = centers_init
 
     def build(self, input_shape):
-        self.centers = self.add_weight(name='centers',
-                                       shape=(self.num_centers, input_shape[-1]),
-                                       initializer='random_normal',
-                                       trainable=True)
-        self.betas = self.add_weight(name='betas',
-                                     shape=(self.num_centers,),
-                                     initializer='ones',
-                                     trainable=True)
+        if self.centers_init is not None:
+            self.centers = self.add_weight(
+                name='centers',
+                shape=(self.num_centers, input_shape[-1]),
+                initializer=tf.constant_initializer(self.centers_init),
+                trainable=True
+            )
+        else:
+            self.centers = self.add_weight(
+                name='centers',
+                shape=(self.num_centers, input_shape[-1]),
+                initializer='random_normal',
+                trainable=True
+            )
+        self.betas = self.add_weight(
+            name='betas',
+            shape=(self.num_centers,),
+            initializer='ones',
+            trainable=True
+        )
         super(RBFLayer, self).build(input_shape)
 
     def call(self, inputs):
@@ -141,10 +154,10 @@ class RBFLayer(layers.Layer):
         return tf.exp(-self.betas * l2)
 
 class RBFN(models.Model):
-    def __init__(self, num_classes, num_centers):
+    def __init__(self, num_classes, num_centers, centers_init=None):
         super(RBFN, self).__init__()
         self.model = tf.keras.Sequential([
-            RBFLayer(num_centers),
+            RBFLayer(num_centers, centers_init=centers_init),
             layers.Dense(num_classes, activation='softmax')
         ])
 

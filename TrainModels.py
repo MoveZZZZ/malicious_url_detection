@@ -65,7 +65,7 @@ class TrainModels:
             print("Bad option!")
             return 0
 
-    def data_pathes_and_model_creation(self, option, model_name, _activation_function, _optimizer, _num_centres, _encoding_dim_AE):
+    def data_pathes_and_model_creation(self, option, model_name, _activation_function, _optimizer, _num_centres, use_kmeans,_encoding_dim_AE):
         if model_name == "bert2":
             data = self._DataPreprocessing.read_data(self._DataPreprocessing.train_cleared_base_dataset_path)
             X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
@@ -94,15 +94,6 @@ class TrainModels:
                                                                                                            X, y,
                                                                                                    0.2,
                                                                                                 42)
-                model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option,
-                                                                                                            model_name,
-                                                                                                            _activation_function,
-                                                                                                            _optimizer,
-                                                                                                            _num_centres,
-                                                                                                            _encoding_dim_AE,
-                                                                                                            input_size,
-                                                                                                            4,
-                                                                                                            self.data_option)
                 scaler = self._TrainTestDataPreproc.create_scaler(X)
                 joblib.dump(scaler, f"{self.models_save_path}/minmax_scaler_{self._ModelNameAndPathesCreator.define_type_of_option(option, self.data_option)}.pkl")
                 X_train_without_saler_end, y_train = self._TrainTestDataPreproc.option_preprocessing(option,
@@ -112,28 +103,43 @@ class TrainModels:
                                                                         X_test_without_saler)
                 X_train = X_train.to_numpy()
                 X_test = X_test.to_numpy()
-            else:
-                data = self.choise_train_dataset_option()
-                X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
-                del data
-                input_size = X.shape[1]
-                X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y,
-                                                                                                                  0.2,
-                                                                                                                  42)
                 model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option,
                                                                                                             model_name,
                                                                                                             _activation_function,
                                                                                                             _optimizer,
                                                                                                             _num_centres,
+                                                                                                            use_kmeans,
+                                                                                                            X_train,
                                                                                                             _encoding_dim_AE,
                                                                                                             input_size,
                                                                                                             4,
                                                                                                             self.data_option)
 
+            else:
+                data = self.choise_train_dataset_option()
+                X, y = self._TrainTestDataPreproc.create_X_and_Y(data)
+                del data
+                input_size = X.shape[1]
+
+                X_train, X_test, y_train, y_test = self._TrainTestDataPreproc.split_data_for_train_and_validation(X, y,
+                                                                                                                  0.2,
+                                                                                                                  42)
                 X_train, y_train = self._TrainTestDataPreproc.option_preprocessing(option, X_train, y_train)
                 X_train = X_train.to_numpy()
                 X_test = X_test.to_numpy()
                 scaler = None
+                model, save_file_name = self._ModelNameAndPathesCreator.create_model_name_and_output_pathes(option,
+                                                                                                            model_name,
+                                                                                                            _activation_function,
+                                                                                                            _optimizer,
+                                                                                                            _num_centres,
+                                                                                                            use_kmeans,
+                                                                                                            X_train,
+                                                                                                            _encoding_dim_AE,
+                                                                                                            input_size,
+                                                                                                            4,
+                                                                                                            self.data_option)
+
         return model, save_file_name, X_train, X_test, y_train, y_test, scaler
 
     def print_model_summary(self, model):
@@ -178,10 +184,10 @@ class TrainModels:
                 f"Error: Loss function {_loss} not found! Available: {list(loss_mapping.keys())}")
             return ""
         return loss_mapping[_loss]
-    def train_model(self, option, model_name, _activation_function="", _optimizer="", _loss="", _epochs = 1, _num_centres_RBFL=10, _encoding_dim_AE = 10, _model_params_string=""):
+    def train_model(self, option, model_name, _activation_function="", _optimizer="", _loss="", _epochs = 1, _num_centres_RBFL=10, use_kmeans = False, _encoding_dim_AE = 10, _model_params_string=""):
         model, save_file_name, X_train, X_test, y_train, y_test, scaler = self.data_pathes_and_model_creation(option, model_name,
                                                                                                               _activation_function, _optimizer,
-                                                                                                              _num_centres_RBFL, _encoding_dim_AE)
+                                                                                                              _num_centres_RBFL, use_kmeans, _encoding_dim_AE)
         save_file_name = save_file_name +f"_{_loss}"+f"_{_model_params_string}"
         self.LogCreator.print_and_write_log(f"Start learn model {model_name}")
         model_train_time_start = time.time()

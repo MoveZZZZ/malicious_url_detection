@@ -5,12 +5,12 @@ import time
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from collections import Counter
-from sklearn.feature_extraction.text import TfidfVectorizer
 from tqdm import tqdm
 import tensorflow as tf
 from imblearn.over_sampling import SMOTE, ADASYN
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.combine import SMOTETomek, SMOTEENN
+from sklearn.cluster import MiniBatchKMeans
 
 class TrainTestDataPreprocessing:
     def __init__(self, log_filename):
@@ -141,6 +141,17 @@ class TrainTestDataPreprocessing:
             y_resampled = y
         return X_resampled, y_resampled
 
+    def get_kmeans_centers(self, X, num_centers,batch_size=1000, max_iter=100):
+        self.LogCreator.print_and_write_log(f"Start get kmeans centres\n")
+        kmeans_centres_get_start = time.time()
+        kmeans = MiniBatchKMeans(n_clusters=num_centers, batch_size=batch_size, max_iter=max_iter, random_state=42)
+        for _ in tqdm(range(max_iter), desc="MiniBatchKMeans iterations"):
+            kmeans = kmeans.partial_fit(X)
+        kmeans_centres_get_end = time.time()
+        self.LogCreator.print_and_write_log(f"End get kmeans centres\n"
+                                            f"Centres: {kmeans.cluster_centers_.shape}\n"
+                                            f"Time to get centres: {self.LogCreator.count_time(kmeans_centres_get_start, kmeans_centres_get_end):.2f} s.")
+        return kmeans.cluster_centers_
 
     def smote_oversampling(self, X, y, sampling_strategy='auto', random_state=42):
         self.LogCreator.print_and_write_log(f"Start SMOTE oversampling\n"

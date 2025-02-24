@@ -8,11 +8,12 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.linear_model import LogisticRegression
 from pytorch_tabnet.tab_model import TabNetClassifier
 from transformers import TFBertForSequenceClassification
+from TrainTestDataPreprocessing import TrainTestDataPreprocessing
 class ModelNameAndPathesCreator:
     def __init__(self, log_filename):
         self.LogCreator = LogFileCreator(log_filename)
 
-    def create_model_name_and_output_pathes(self, option, model_name, _activation_function='relu', _optimizer='adam', _num_centres=10, _encoding_dim_AE=10, input_size=None ,num_classes=4, db_name=""):
+    def create_model_name_and_output_pathes(self, option, model_name, _activation_function='relu', _optimizer='adam', _num_centres=10,use_kmeans_RBFL = False, X_train=None, _encoding_dim_AE=10,  input_size=None ,num_classes=4, db_name=""):
         model = None
         end_file_name = self.define_type_of_option(option, db_name)
 
@@ -75,11 +76,16 @@ class ModelNameAndPathesCreator:
             model = GNN(input_size, 128, num_classes, _activation_function)
             #model.compile(optimizer=_optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
             save_file_name = f"GNN_{end_file_name}_{_optimizer}_{_activation_function}"
-        elif model_name == "rbfn":
+        elif model_name == "RBFL":
             if input_size is None:
-                raise ValueError("RBFN requires input_size to be specified")
-            model = RBFN(num_classes, _num_centres)
-            save_file_name = f"RBFN_{end_file_name}_{_optimizer}"
+                raise ValueError("RBFL requires input_size to be specified")
+            if use_kmeans_RBFL == True:
+                t_preproc = TrainTestDataPreprocessing("k_means")
+                model = RBFN(num_classes, _num_centres, t_preproc.get_kmeans_centers(X_train, _num_centres))
+                save_file_name = f"RBFL_k_means_{end_file_name}_{_optimizer}"
+            else:
+                model = RBFN(num_classes, _num_centres)
+                save_file_name = f"RBFL_{end_file_name}_{_optimizer}"
         elif model_name == "AE":
             if input_size is None:
                 raise ValueError("AE requires input_size to be specified")

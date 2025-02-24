@@ -63,7 +63,7 @@ class Menu:
             2: "NN"
         }
         self.models_ml = ["RFC", "lgbm", "xgb", "mlp", "log_reg"]
-        self.models_nn = ["deep_mlp_3", "deep_mlp_5", "deep_mlp_7", "gnn", "AE", "RBFN"]
+        self.models_nn = ["deep_mlp_3", "deep_mlp_5", "deep_mlp_7", "gnn", "AE", "RBFL"]
         self.params = {
         "option": 0,
         "model_name": "",
@@ -72,6 +72,7 @@ class Menu:
         "_loss": "",
         "_epochs": 0,
         "_num_centres_RBFL": 0,
+        "use_kmeans": False,
         "_encoding_dim_AE": 0,
         "_model_params_string": None
         }
@@ -149,7 +150,7 @@ class Menu:
         self.params['_encoding_dim_AE'] = dim
         print(f"The dimensionality for AE has been selected: {dim}")
     def select_centres_for_RBFL(self):
-        centres = self.get_choice("Enter the number of centres for RBFL (1 to 30): ", range(1, 31))
+        centres = self.get_choice("Enter the number of centres for RBFL (1 to 1500): ", range(1, 1501))
         self.params['_num_centres_RBFL'] = centres
         print(f"The dimensionality for AE has been selected: {centres}")
     def write_model_params_string(self):
@@ -210,8 +211,9 @@ class Menu:
         add_row("Dataset:", dataset_str)
         add_row("Option:", self.options.get(self.params['option'], 'N/A'))
         add_row("Model Name:", self.params.get('model_name', 'N/A'))
-        if self.params["model_name"] in self.models_nn:
+        if self.params["model_name"] in self.models_nn and self.params["model_name"] != "RBFL":
             add_row("Activation Function:", self.params.get('_activation_function', 'N/A'))
+        elif self.params["model_name"] in self.models_nn:
             add_row("Optimizer:", self.params.get('_optimizer', 'N/A'))
             add_row("Loss Function:", self.params.get('_loss', 'N/A'))
             add_row("Epochs:", str(self.params.get('_epochs', 'N/A')))
@@ -219,6 +221,7 @@ class Menu:
             add_row("Encoding Dimension (AE):", str(self.params.get('_encoding_dim_AE', 'N/A')))
         elif self.params["model_name"] == "RBFL":
             add_row("Number of Centres (RBFL):", str(self.params.get('_num_centres_RBFL', 'N/A')))
+            add_row("Use kmeans (RBFL):", "Yes" if self.params["use_kmeans"] == True else "No")
         add_row("Log_filename:", self.log_filename)
         add_row("Model Params String:",
                 "N/A" if self.params.get('_model_params_string', 'N/A') == "" else self.params.get(
@@ -226,6 +229,20 @@ class Menu:
         summary_lines.append(border)
         summary_text = "\n".join(summary_lines)
         _log.print_and_write_log(summary_text)
+    def use_kmeans_option(self):
+        while True:
+            try:
+                print("Use kmeans for centroids?:\n1: Yes\n0: No")
+                use_kmeans = int(input("Enter the kmeans option: "))
+                if use_kmeans not in [0,1]:
+                    print("Error: enter an 0 or 1. Try again.")
+                else:
+                    self.params["use_kmeans"] = True if use_kmeans == 1 else False
+                    return
+            except ValueError:
+                print("Error: enter an integer.")
+
+
     def train(self):
         _TrainModel = TrainModels(self.log_filename, self.dataset)
         _TrainModel.train_model(**self.params)
@@ -249,18 +266,21 @@ class Menu:
         else:
             self.select_model_nn()
             print(42 * "=")
-            self.select_activation_function()
-            print(42 * "=")
             self.select_optimizer()
             print(42 * "=")
             self.select_loss()
             print(42 * "=")
-            if self.params["model_name"] == "AE":
-                self.select_dim_for_AE()
-                print(42 * "=")
-            elif self.params["model_name"] == "RBFL":
+            if self.params["model_name"] == "RBFL":
                 self.select_centres_for_RBFL()
                 print(42 * "=")
+                self.use_kmeans_option()
+                print(42 * "=")
+            else:
+                self.select_activation_function()
+                print(42 * "=")
+                if self.params["model_name"] == "AE":
+                    self.select_dim_for_AE()
+                    print(42 * "=")
             self.select_epochs_number()
             print(42 * "=")
             self.write_model_params_string()
