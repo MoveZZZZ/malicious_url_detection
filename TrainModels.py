@@ -272,7 +272,7 @@ class TrainModels:
                 f"Best Epoch (EarlyStopping): {best_epoch if early_stopping.stopped_epoch > 0 else 'No EarlyStopping'}\n"
                 f"{self.LogCreator.string_spit_stars}"
             )
-            model.save(f"{self.models_save_path}/{save_file_name}.keras")
+            model.save(f"{self.models_save_path}/{save_file_name}.keras", save_format="keras")
             self.CM_and_ROC_creator.create_confusion_matrix(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_ROC(model, X_test, y_test, save_file_name)
             self.CM_and_ROC_creator.create_plot_traning_history(model_name, history, save_file_name)

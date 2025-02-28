@@ -79,7 +79,6 @@ class Menu:
         self.dataset = None
 
     def get_choice(self, prompt, valid_options):
-
         while True:
             try:
                 choice = int(input(prompt))
@@ -146,11 +145,11 @@ class Menu:
         self.params['model_name'] = self.models_nn[choice - 1]
         print(f"The NN model has been selected: {self.params['model_name']}")
     def select_dim_for_AE(self):
-        dim = self.get_choice("Enter the encoder dimension for AutoEncoder (1 to 20): ", range(1, 21))
+        dim = self.get_choice("Enter the encoder dimension for AutoEncoder (1 to 500): ", range(1, 501))
         self.params['_encoding_dim_AE'] = dim
         print(f"The dimensionality for AE has been selected: {dim}")
     def select_centres_for_RBFL(self):
-        centres = self.get_choice("Enter the number of centres for RBFL (1 to 1500): ", range(1, 1501))
+        centres = self.get_choice("Enter the number of centres for RBFL (1 to 10000): ", range(1, 10001))
         self.params['_num_centres_RBFL'] = centres
         print(f"The dimensionality for AE has been selected: {centres}")
     def write_model_params_string(self):
@@ -213,15 +212,15 @@ class Menu:
         add_row("Model Name:", self.params.get('model_name', 'N/A'))
         if self.params["model_name"] in self.models_nn and self.params["model_name"] != "RBFL":
             add_row("Activation Function:", self.params.get('_activation_function', 'N/A'))
-        elif self.params["model_name"] in self.models_nn:
+        elif self.params["model_name"] == "RBFL":
+            add_row("Number of Centres (RBFL):", str(self.params.get('_num_centres_RBFL', 'N/A')))
+            add_row("Use kmeans (RBFL):", "Yes" if self.params["use_kmeans"] == True else "No")
+        if self.params["model_name"] in self.models_nn:
             add_row("Optimizer:", self.params.get('_optimizer', 'N/A'))
             add_row("Loss Function:", self.params.get('_loss', 'N/A'))
             add_row("Epochs:", str(self.params.get('_epochs', 'N/A')))
         if self.params["model_name"] == "AE":
             add_row("Encoding Dimension (AE):", str(self.params.get('_encoding_dim_AE', 'N/A')))
-        elif self.params["model_name"] == "RBFL":
-            add_row("Number of Centres (RBFL):", str(self.params.get('_num_centres_RBFL', 'N/A')))
-            add_row("Use kmeans (RBFL):", "Yes" if self.params["use_kmeans"] == True else "No")
         add_row("Log_filename:", self.log_filename)
         add_row("Model Params String:",
                 "N/A" if self.params.get('_model_params_string', 'N/A') == "" else self.params.get(
