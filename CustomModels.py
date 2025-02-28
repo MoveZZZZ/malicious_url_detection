@@ -19,6 +19,12 @@ class DeepMLP_3(models.Model):
             layers.Dropout(0.2),
             layers.Dense(num_classes, activation="softmax")
         ])
+        self.build(input_shape=(None, input_size))
+
+    def build(self, input_shape):
+        super(DeepMLP_3, self).build(input_shape)
+        self.model.build(input_shape)
+        print("DeepMLP_3 built with input shape:", input_shape)
 
     def call(self, inputs, training=False):
         return self.model(inputs, training=training)
@@ -60,6 +66,12 @@ class DeepMLP_5(models.Model):
             layers.Dropout(0.2),
             layers.Dense(num_classes, activation="softmax")
         ])
+        self.build(input_shape=(None, input_size))
+
+    def build(self, input_shape):
+        super(DeepMLP_5, self).build(input_shape)
+        self.model.build(input_shape)
+        print("DeepMLP_5 built with input shape:", input_shape)
 
     def call(self, inputs, training=False):
         return self.model(inputs, training=training)
@@ -107,7 +119,12 @@ class DeepMLP_7(models.Model):
             layers.Dropout(0.2),
             layers.Dense(num_classes, activation="softmax")
         ])
+        self.build(input_shape=(None, input_size))
 
+    def build(self, input_shape):
+        super(DeepMLP_7, self).build(input_shape)
+        self.model.build(input_shape)
+        print("DeepMLP_7 built with input shape:", input_shape)
     def call(self, inputs, training=False):
         return self.model(inputs, training=training)
 
@@ -136,7 +153,12 @@ class GNN(models.Model):
             layers.Dense(hidden_dim, activation=_activation),
             layers.Dense(num_classes, activation="softmax")
         ])
+        self.build(input_shape=(None, input_size))
 
+    def build(self, input_shape):
+        super(GNN, self).build(input_shape)
+        self.model.build(input_shape)
+        print("GNN built with input shape:", input_shape)
     def call(self, inputs):
         return self.model(inputs)
 
@@ -181,7 +203,7 @@ class RBFLayer(layers.Layer):
             initializer='ones',
             trainable=True
         )
-        super().build(input_shape)
+        super(RBFLayer, self).build(input_shape)
 
     def call(self, inputs):
         diff = tf.expand_dims(inputs, axis=1) - self.centers
@@ -210,6 +232,11 @@ class RBFN(models.Model):
             RBFLayer(num_centers, centers_init=centers_init),
             layers.Dense(num_classes, activation='softmax')
         ])
+
+    def build(self, input_shape):
+        super(RBFN, self).build(input_shape)
+        self.model.build(input_shape)
+        print("RBFN built with input shape:", input_shape)
 
     def call(self, inputs, training=False):
         return self.model(inputs)
@@ -252,7 +279,17 @@ class AutoencoderClassifier(models.Model):
             layers.Dropout(0.2),
             layers.Dense(num_classes, activation='softmax')
         ])
+        self.build(input_shape=(None, input_size))
 
+    def build(self, input_shape):
+        super(AutoencoderClassifier, self).build(input_shape)
+        self.encoder.build(input_shape)
+        dummy_input = tf.zeros(input_shape)
+        encoded_output = self.encoder(dummy_input)
+        encoded_shape = encoded_output.shape
+        self.decoder.build(encoded_shape)
+        self.classifier.build(encoded_shape)
+        print("AutoencoderClassifier built with input shape:", input_shape)
     def call(self, inputs, training=False):
         encoded = self.encoder(inputs)
         decoded = self.decoder(encoded)
