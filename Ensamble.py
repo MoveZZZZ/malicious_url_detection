@@ -79,26 +79,18 @@ class ModelEnsembler:
 
     def create_matrix(self, y, y_pred, filename):
         matrix_path = "D:/PWR/Praca magisterska/models/1_test/images"
-
-        # Если y представлено в виде one-hot векторов, преобразуем его в одномерный массив меток классов
         if y.ndim > 1 and y.shape[1] > 1:
             y = np.argmax(y, axis=1)
 
         y_series = pd.Series(y)
         print(y_series.value_counts())
-
-        # Accuracy – вычисляем среднее совпадение меток
         acc = np.mean(y == y_pred)
-
-        # Для метрик recall и f1 используем multiclass (здесь pos_label не нужен, но оставим как есть, если требуется)
         if len(np.unique(y)) == 2:
             sensitivity = recall_score(y, y_pred, average='macro', pos_label=1)
             f1 = f1_score(y, y_pred, average='macro')
         else:
             sensitivity = recall_score(y, y_pred, average='macro')
             f1 = f1_score(y, y_pred, average='macro')
-
-        # Confusion Matrix
         cm = confusion_matrix(y, y_pred)
         fig, ax = plt.subplots(figsize=(15, 15))
         disp = ConfusionMatrixDisplay(confusion_matrix=cm)
@@ -107,14 +99,10 @@ class ModelEnsembler:
         print(cm)
 
         disp.plot(ax=ax, cmap='Blues', colorbar=True)
-
-        # Обновление значений матрицы с добавлением запятых в числах
         for i in range(cm.shape[0]):
             for j in range(cm.shape[1]):
                 value = cm[i, j]
                 disp.text_[i, j].set_text(f"{value:,}")
-
-        # Ошибки: EPE (MSE) и MAE
         epe = mean_squared_error(y, y_pred)
         model_error = mean_absolute_error(y, y_pred)
         metrics_text = (f"Acc: {acc:.4f} | Sens: {sensitivity:.4f} | F1: {f1:.4f}\n"
@@ -123,8 +111,6 @@ class ModelEnsembler:
             f"Acc: {acc:.4f} | Sens: {sensitivity:.4f} | F1: {f1:.4f}\n"
             f"EPE (MSE): {epe:.4f} | Błąd (MAE): {model_error:.4f}\n"
             f"{self.DataLog.string_spit_stars}")
-
-        # Специфичные метрики для бинарной классификации
         if len(np.unique(y)) == 2:
             tn, fp, fn, tp = cm.ravel()
             fpr = fp / (fp + tn) if (fp + tn) > 0 else 0
@@ -134,7 +120,6 @@ class ModelEnsembler:
             self.DataLog.print_and_write_log(
                 f"FPR: {fpr:.4f} | FNR: {fnr:.4f} | Specificity: {specificity:.4f}\n"
                 f"{self.DataLog.string_spit_stars}")
-        # Метрики для мультиклассовой классификации
         else:
             for i in range(len(np.unique(y))):
                 tn = cm.sum() - cm[i, :].sum() - cm[:, i].sum() + cm[i, i]
@@ -154,8 +139,6 @@ class ModelEnsembler:
 
         plt.subplots_adjust(bottom=0.2)
         plt.figtext(0.5, 0.15, metrics_text, fontsize=10, ha='center', va='top', color="red")
-
-        # Сохранение изображения матрицы ошибок
         plt.savefig(f"{matrix_path}/{filename}_confusion_matrix.png", bbox_inches='tight')
         plt.close()
 
