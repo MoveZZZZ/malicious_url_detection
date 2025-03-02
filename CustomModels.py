@@ -283,13 +283,9 @@ class AutoencoderClassifier(models.Model):
 
     def build(self, input_shape):
         super(AutoencoderClassifier, self).build(input_shape)
-        self.encoder.build(input_shape)
-        dummy_input = tf.zeros(input_shape)
-        encoded_output = self.encoder(dummy_input)
-        encoded_shape = encoded_output.shape
-        self.decoder.build(encoded_shape)
-        self.classifier.build(encoded_shape)
-        print("AutoencoderClassifier built with input shape:", input_shape)
+        encoded_shape = self.encoder.compute_output_shape(input_shape)
+        print("AutoencoderClassifier built with input shape:", input_shape,
+              "and encoder output shape:", encoded_shape)
     def call(self, inputs, training=False):
         encoded = self.encoder(inputs)
         decoded = self.decoder(encoded)

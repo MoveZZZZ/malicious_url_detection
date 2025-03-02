@@ -9,6 +9,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+import joblib
 from sklearn.metrics import accuracy_score
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,6 +18,12 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, mean_squar
     mean_absolute_error
 import pandas as pd
 from CustomModels import DeepMLP_3,DeepMLP_5,DeepMLP_7, AutoencoderClassifier
+
+from lightgbm import LGBMClassifier
+from xgboost import XGBClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import RandomizedSearchCV
+from scipy.stats import randint, uniform
 class ModelEnsembler:
     def __init__(self):
         self.log_name = "ensamble"
@@ -39,24 +46,60 @@ class ModelEnsembler:
         self.models_files = sorted([f for f in os.listdir(self.folder_path) if f.endswith(".keras")])
         self.models = [load_model(os.path.join(self.folder_path, file), custom_objects=custom_objects) for file in self.models_files]
         self.DataLog.print_and_write_log(f"Loaded {len(self.models)}  models: {self.models_files}")
-        tm = TrainModels(self.log_name, "123")
-        tm.print_model_summary(self.models[0])
     def load_scaler(self):
         scaler_path = "D:/PWR/Praca magisterska/models/1_test/minmax_scaler_bert_768_browser_np_features_full_data_scaled.pkl"
         scaler = joblib.load(scaler_path)
         return scaler
 
     def stacking(self, X_test, y_test):
-        predictions = np.array([model.predict(X_test) for model in self.models])
+        pred_list = []
+        for model in self.models:
+            pred = model.predict(X_test)
+            if isinstance(pred, dict):
+                if 'classifier' in pred:
+                    pred = pred['classifier']
+                elif 'predictions' in pred:
+                    pred = pred['predictions']
+                else:
+                    raise ValueError("The model returned a dictionary with no 'classifier' or 'predictions' keys")
+            if isinstance(pred, np.ndarray) and pred.ndim == 1:
+                pred = np.expand_dims(pred, axis=1)
+            pred_list.append(pred)
+        predictions = np.stack(pred_list, axis=0)
         n_samples = X_test.shape[0]
         predictions_meta = predictions.transpose(1, 0, 2).reshape(n_samples, -1)
         X_train_meta, X_val_meta, y_train_meta, y_val_meta = train_test_split(
             predictions_meta, y_test, test_size=0.2, random_state=42
         )
-        y_train_meta = np.argmax(y_train_meta, axis=1)
-        y_val_meta = np.argmax(y_val_meta, axis=1)
-        meta_model = LogisticRegression(max_iter=1000, solver='liblinear')
+        if isinstance(y_train_meta, np.ndarray) and y_train_meta.ndim > 1 and y_train_meta.shape[1] > 1:
+            y_train_meta = np.argmax(y_train_meta, axis=1)
+        if isinstance(y_val_meta, np.ndarray) and y_val_meta.ndim > 1 and y_val_meta.shape[1] > 1:
+            y_val_meta = np.argmax(y_val_meta, axis=1)
+        meta_model = RandomForestClassifier(random_state=42)
+
+        # param_dist = {
+        #     'n_estimators': randint(50, 300),
+        #     'max_depth': [None, 5, 10, 20],
+        #     'min_samples_split': randint(2, 10),
+        #     'min_samples_leaf': randint(1, 5),
+        #     'max_features': ['sqrt', 'log2']
+        # }
+        #
+        # random_search = RandomizedSearchCV(
+        #     estimator=meta_model,
+        #     param_distributions=param_dist,
+        #     n_iter=20,
+        #     scoring='f1_macro',
+        #     cv=5,
+        #     random_state=42,
+        #     n_jobs=-1,
+        #     verbose=2
+        # )
+        #random_search.fit(X_train_meta, y_train_meta)
+        # print("Best params:", random_search.best_params_)
+        # print("Best score:", random_search.best_score_)
         meta_model.fit(X_train_meta, y_train_meta)
+        joblib.dump(meta_model,f'{self.folder_path}/meta_model.pkl')
         final_predictions = meta_model.predict(X_val_meta)
         accuracy = accuracy_score(y_val_meta, final_predictions)
         print(f"Stacking model accuracy: {accuracy:.4f}")
