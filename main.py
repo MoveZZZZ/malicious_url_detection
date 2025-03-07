@@ -1,10 +1,8 @@
-from DataPreprocessing import DataPreprocessing
 
-
-
+from Menu import Menu
 def main():
-    data_preproc = DataPreprocessing("test")
-    data_preproc.change_data_labels(data_preproc.data_full.copy())
 
+    menu = Menu()
+    menu.draw_menu()
 
 main()
